@@ -110,31 +110,29 @@ export async function getWeeklyScoreboard(teacherId?: string): Promise<{ student
 
 /** Get gold/silver/bronze finish counts for a student across all weeks. */
 export async function getMedalCounts(studentId: string, teacherId?: string): Promise<{ gold: number; silver: number; bronze: number }> {
-  // Get all distinct week_starts
-  const { data: weekRows } = await sb
+  // Fetch ALL battles in one query
+  const { data: allBattles } = await sb
     .from('arena_battles')
-    .select('week_start')
-    .order('week_start', { ascending: false });
+    .select('week_start, winner_student_id');
 
-  const weeks = [...new Set((weekRows || []).map((r: any) => r.week_start as string))];
+  // Fetch ALL students in one query
+  let stuQuery = sb.from('students').select('id');
+  if (teacherId) stuQuery = stuQuery.eq('teacher_id', teacherId);
+  const { data: stuRows } = await stuQuery;
+  const allIds = (stuRows || []).map((s: any) => s.id);
 
+  // Group battles by week — all in JS, no more queries
+  const byWeek: Record<string, Record<string, number>> = {};
+  for (const row of (allBattles || [])) {
+    if (!byWeek[row.week_start]) byWeek[row.week_start] = {};
+    byWeek[row.week_start][row.winner_student_id] =
+      (byWeek[row.week_start][row.winner_student_id] || 0) + 1;
+  }
+
+  // Count medals across all weeks
   let gold = 0, silver = 0, bronze = 0;
 
-  for (const week of weeks) {
-    // Get all battles for this week
-    const { data } = await sb.from('arena_battles').select('winner_student_id').eq('week_start', week);
-    const counts: Record<string, number> = {};
-    for (const row of (data || [])) {
-      counts[row.winner_student_id] = (counts[row.winner_student_id] || 0) + 1;
-    }
-
-    // Rank students for this week
-    let stuQuery = sb.from('students').select('id');
-    if (teacherId) stuQuery = stuQuery.eq('teacher_id', teacherId);
-    const { data: stuRows } = await stuQuery;
-    const allIds = (stuRows || []).map((s: any) => s.id);
-
-    // Give 0 wins to students with no battles
+  for (const counts of Object.values(byWeek)) {
     const ranked = allIds
       .map((id: string) => ({ id, wins: counts[id] || 0 }))
       .filter((s: any) => s.wins > 0)

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClassCard — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="#" class="logo">✦ ClassCard</a>
+  <div class="header-right">
+    <span class="user-pill" id="userPill">…</span>
+    <span class="role-badge admin">Admin</span>
+    <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+  </div>
+</header>
+
+<div class="page">
+  <div class="stat-counters" id="statCounters">
+    <div class="stat-counter"><div class="sc-num">—</div><div class="sc-label">Teachers</div></div>
+    <div class="stat-counter"><div class="sc-num">—</div><div class="sc-label">Students</div></div>
+    <div class="stat-counter"><div class="sc-num">—</div><div class="sc-label">Cards Generated</div></div>
+    <div class="stat-counter"><div class="sc-num">—</div><div class="sc-label">Gold Rare</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('teachers')">Teachers</button>
+    <button class="tab-btn" onclick="switchTab('students')">Students</button>
+    <button class="tab-btn" onclick="switchTab('cards')">All Cards</button>
+  </div>
+
+  <div class="tab-pane active" id="tab-teachers">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="panel-title" style="margin:0">Teacher Accounts</div>
+      <button class="btn btn-gold btn-sm" onclick="openModal('createTeacherModal')">+ Create Teacher</button>
+    </div>
+    <div class="panel">
+      <table class="data-table" id="teachersTable">
+        <thead><tr><th>Name</th><th>Email</th><th>Students</th><th>Cards</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="tab-students">
+    <div class="panel-title" style="margin-bottom:1rem">All Students</div>
+    <div class="panel">
+      <table class="data-table" id="studentsTable">
+        <thead><tr><th>Name</th><th>Teacher</th><th>Login Email</th><th>Cards</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:2rem">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="tab-cards">
+    <div class="panel-title" style="margin-bottom:1rem">All Cards</div>
+    <div class="cards-grid" id="allCardsGrid">
+      <div class="empty-state" style="width:100%"><div class="empty-icon">🃏</div>Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+
+<div class="modal-backdrop hidden" id="createTeacherModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('createTeacherModal')">✕</button>
+    <div class="modal-title">Create Teacher Account</div>
+    <div id="createTeacherAlert"></div>
+    <div class="form-group"><label>Teacher Name</label><input type="text" id="teacherName" placeholder="e.g. Ms. Smith"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="teacherEmail" placeholder="teacher@school.edu"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="teacherPassword" placeholder="Min. 6 characters"></div>
+    <div style="display:flex;gap:0.8rem;margin-top:0.5rem">
+      <button class="btn btn-gold" id="createTeacherBtn" onclick="createTeacher()">Create Teacher</button>
+      <button class="btn btn-outline" onclick="closeModal('createTeacherModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="editTeacherModal">
+  <div class="modal" style="max-width:440px;max-height:90vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeModal('editTeacherModal')">✕</button>
+    <div class="modal-title">✏ Edit Teacher</div>
+    <div id="editTeacherAlert"></div>
+    <input type="hidden" id="editTeacherId">
+    <div class="form-group"><label>Name</label><input type="text" id="editTeacherName"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="editTeacherEmail"></div>
+    <hr class="divider">
+    <div class="form-group">
+      <label>Reset Password <span style="font-size:0.65rem;color:var(--text-muted)">(leave blank to keep current)</span></label>
+      <input type="password" id="editTeacherPassword" placeholder="New password (optional, min. 6 characters)">
+    </div>
+    <div style="display:flex;gap:0.8rem;margin-top:0.5rem">
+      <button class="btn btn-gold" id="editTeacherSaveBtn" onclick="saveEditTeacher()">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeModal('editTeacherModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="resetPasswordModal">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeModal('resetPasswordModal')">✕</button>
+    <div class="modal-title">🔑 Reset Password</div>
+    <div id="resetPasswordAlert"></div>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">Sending reset email to: <strong id="resetPasswordName" style="color:var(--text)"></strong></p>
+    <input type="hidden" id="resetPasswordEmail">
+    <div style="background:rgba(200,160,0,0.08);border:1px solid rgba(200,160,0,0.2);border-radius:8px;padding:10px 12px;font-size:0.78rem;color:#a08030;margin-bottom:1rem;line-height:1.5">
+      Supabase will send the user a secure link to set their own new password. No password is stored here.
+    </div>
+    <div style="display:flex;gap:0.8rem">
+      <button class="btn btn-gold" id="resetPasswordBtn" onclick="doSendPasswordReset()">Send Reset Email</button>
+      <button class="btn btn-outline" onclick="closeModal('resetPasswordModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="deleteUserModal">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeModal('deleteUserModal')">✕</button>
+    <div class="modal-title" style="color:var(--danger)">🗑 Delete Account</div>
+    <div id="deleteUserAlert"></div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.2rem">
+      Delete <strong id="deleteUserNameDisplay" style="color:var(--text)"></strong>?<br>
+      <span id="deleteUserSubtext" style="color:var(--danger);font-size:0.78rem"></span>
+    </p>
+    <input type="hidden" id="deleteUserIdField">
+    <input type="hidden" id="deleteUserRoleField">
+    <div style="display:flex;gap:0.8rem">
+      <button class="btn btn-danger" id="deleteUserConfirmBtn" onclick="doDeleteUser()">Yes, Delete</button>
+      <button class="btn btn-outline" onclick="closeModal('deleteUserModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="editStudentModal">
+  <div class="modal" style="max-width:440px;max-height:90vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeModal('editStudentModal')">✕</button>
+    <div class="modal-title">✏ Edit Student</div>
+    <div id="editStudentAlert"></div>
+    <input type="hidden" id="editStudentId">
+    <input type="hidden" id="editStudentAuthId">
+    <div class="form-group"><label>Student Name</label><input type="text" id="editStudentName"></div>
+    <div class="form-group"><label>Login Email</label><input type="email" id="editStudentEmail"></div>
+    <hr class="divider">
+    <div class="form-group">
+      <label>Reset Password <span style="font-size:0.65rem;color:var(--text-muted)">(leave blank to keep current)</span></label>
+      <input type="password" id="editStudentPassword" placeholder="New password (optional, min. 6 characters)">
+    </div>
+    <div style="display:flex;gap:0.8rem;margin-top:0.5rem">
+      <button class="btn btn-gold" id="editStudentSaveBtn" onclick="saveEditStudent()">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeModal('editStudentModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="editCardModal">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="closeModal('editCardModal')">✕</button>
+    <div class="modal-title">✏ Edit Card</div>
+    <div id="editCardAlert"></div>
+    <input type="hidden" id="editCardId">
+    <div class="grid-2">
+      <div class="form-group"><label>Card Name</label><input type="text" id="editCardName"></div>
+      <div class="form-group"><label>HP</label><input type="number" id="editCardHp" min="1" max="999"></div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea id="editCardDesc" style="min-height:60px"></textarea></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Move 1 Name</label><input type="text" id="editCardMove1Name"></div>
+      <div class="form-group"><label>Move 1 Damage</label><input type="number" id="editCardMove1Dmg"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Move 2 Name</label><input type="text" id="editCardMove2Name"></div>
+      <div class="form-group"><label>Move 2 Damage</label><input type="number" id="editCardMove2Dmg"></div>
+    </div>
+    <div class="form-group">
+      <label>Image URL <span style="font-size:0.65rem;color:var(--text-muted)">(edit or paste new URL)</span></label>
+      <input type="text" id="editCardImageUrl" placeholder="https://image.pollinations.ai/prompt/…">
+    </div>
+    <div style="display:flex;gap:0.8rem;margin-top:0.5rem;flex-wrap:wrap">
+      <button class="btn btn-gold" id="editCardSaveBtn" onclick="saveEditCard()">Save Changes</button>
+      <button class="btn btn-outline" style="border-color:rgba(80,160,255,0.4);color:#80b8ff;" onclick="regenCardImageInModal()">🎨 New Image URL</button>
+      <button class="btn btn-outline" onclick="closeModal('editCardModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="deleteCardModal">
+  <div class="modal" style="max-width:400px">
+    <button class="modal-close" onclick="closeModal('deleteCardModal')">✕</button>
+    <div class="modal-title" style="color:var(--danger)">🗑 Delete Card</div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.2rem">
+      Delete "<strong id="deleteCardNameDisplay" style="color:var(--text)"></strong>"?<br>
+      <span style="color:var(--danger);font-size:0.78rem">⚠ Cannot be undone.</span>
+    </p>
+    <input type="hidden" id="deleteCardIdField">
+    <div style="display:flex;gap:0.8rem">
+      <button class="btn btn-danger" id="deleteCardConfirmBtn" onclick="doDeleteCard()">Yes, Delete Card</button>
+      <button class="btn btn-outline" onclick="closeModal('deleteCardModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+<script src="auth.js"></script>
+<script src="dashboard.js"></script>
+<script src="ai.js"></script>
+<script>
+let session = null;
+let allProfilesCache = [];
+let allStudentsCache = [];
+let allCardsCache    = [];
+
+(async () => {
+  session = await Auth.requireAuth('admin');
+  if (!session) return;
+  document.getElementById('userPill').textContent = session.profile.name || session.user.email;
+  await loadAll();
+})();
+
+async function loadAll() {
+  const [profiles, students, cards] = await Promise.all([
+    Dashboard.getAllProfiles(),
+    Dashboard.getAllStudents(),
+    Dashboard.getAllCards(),
+  ]);
+  allProfilesCache = profiles;
+  allStudentsCache = students;
+  allCardsCache    = cards;
+  const teachers  = profiles.filter(p => p.role === 'teacher');
+  const goldCards = cards.filter(c => c.rarity === 'gold-rare');
+  const nums = document.querySelectorAll('.sc-num');
+  nums[0].textContent = teachers.length;
+  nums[1].textContent = students.length;
+  nums[2].textContent = cards.length;
+  nums[3].textContent = goldCards.length;
+  renderTeachersTable(teachers, students, cards);
+  renderStudentsTable(students, profiles, cards);
+  renderAllCards(cards);
+}
+
+function switchTab(name) {
+  const names = ['teachers','students','cards'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+
+/* ── TEACHERS ── */
+function renderTeachersTable(teachers, students, cards) {
+  const tbody = document.querySelector('#teachersTable tbody');
+  if (!teachers.length) { tbody.innerHTML='<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:2rem">No teachers yet.</td></tr>'; return; }
+  tbody.innerHTML = teachers.map(t => {
+    const myS = students.filter(s=>s.teacher_id===t.id).length;
+    const myC = cards.filter(c=>c.teacher_id===t.id).length;
+    return `<tr>
+      <td>${escHtml(t.name)}</td>
+      <td style="color:var(--text-muted);font-size:0.8rem">${escHtml(t.email)}</td>
+      <td>${myS}</td><td>${myC}</td>
+      <td style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" style="border-color:rgba(200,160,0,0.4);color:#ffe080;"
+          onclick="openEditTeacher('${t.id}','${escJs(t.name)}','${escJs(t.email)}')">✏ Edit</button>
+        <button class="btn btn-outline btn-sm" style="border-color:rgba(80,200,120,0.4);color:#80d4a0;"
+          onclick="openResetPassword('${escJs(t.email)}','${escJs(t.name)}')">🔑 Reset PW</button>
+        <button class="btn btn-danger btn-sm"
+          onclick="confirmDeleteUser('${t.id}','${escJs(t.name)}','teacher')">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+
+async function createTeacher() {
+  const name=document.getElementById('teacherName').value.trim();
+  const email=document.getElementById('teacherEmail').value.trim();
+  const pw=document.getElementById('teacherPassword').value;
+  const alertEl=document.getElementById('createTeacherAlert');
+  if(!name||!email||!pw){alertEl.innerHTML='<div class="alert alert-error">Please fill in all fields.</div>';return;}
+  const btn=document.getElementById('createTeacherBtn');
+  btn.disabled=true;btn.textContent='Creating…';
+  try{
+    await Auth.signUp(email,pw,'teacher',name);
+    alertEl.innerHTML='<div class="alert alert-success">Teacher account created!</div>';
+    await loadAll();btn.disabled=false;btn.textContent='Create Teacher';
+    setTimeout(()=>closeModal('createTeacherModal'),1500);
+  }catch(e){alertEl.innerHTML=`<div class="alert alert-error">${e.message}</div>`;btn.disabled=false;btn.textContent='Create Teacher';}
+}
+
+function openEditTeacher(id,name,email){
+  document.getElementById('editTeacherId').value=id;
+  document.getElementById('editTeacherName').value=name;
+  document.getElementById('editTeacherEmail').value=email;
+  document.getElementById('editTeacherPassword').value='';
+  document.getElementById('editTeacherAlert').innerHTML='';
+  openModal('editTeacherModal');
+}
+async function saveEditTeacher(){
+  const id=document.getElementById('editTeacherId').value;
+  const name=document.getElementById('editTeacherName').value.trim();
+  const email=document.getElementById('editTeacherEmail').value.trim();
+  const password=document.getElementById('editTeacherPassword').value;
+  const alertEl=document.getElementById('editTeacherAlert');
+  if(!name||!email){alertEl.innerHTML='<div class="alert alert-error">Name and email required.</div>';return;}
+  const btn=document.getElementById('editTeacherSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    await sb.from('profiles').update({name,email}).eq('id',id);
+    // Update password via Edge Function if provided
+    if(password && password.length>=6){
+      const {data:{session:currentSession}}=await sb.auth.getSession();
+      const token=currentSession?.access_token;
+      const res=await fetch(`${SUPABASE_URL}/functions/v1/update-user-password`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body:JSON.stringify({userId:id,newPassword:password}),
+      });
+      if(!res.ok){const err=await res.json();throw new Error(err.error||'Password update failed');}
+    } else if(password && password.length>0){
+      throw new Error('Password must be at least 6 characters.');
+    }
+    alertEl.innerHTML='<div class="alert alert-success">Updated!</div>';
+    await loadAll();btn.disabled=false;btn.textContent='Save Changes';
+    setTimeout(()=>closeModal('editTeacherModal'),1200);
+  }catch(e){alertEl.innerHTML=`<div class="alert alert-error">${e.message}</div>`;btn.disabled=false;btn.textContent='Save Changes';}
+}
+
+/* ── RESET PASSWORD ── */
+function openResetPassword(email,name){
+  document.getElementById('resetPasswordEmail').value=email;
+  document.getElementById('resetPasswordName').textContent=name;
+  document.getElementById('resetPasswordAlert').innerHTML='';
+  openModal('resetPasswordModal');
+}
+async function doSendPasswordReset(){
+  const email=document.getElementById('resetPasswordEmail').value;
+  const alertEl=document.getElementById('resetPasswordAlert');
+  const btn=document.getElementById('resetPasswordBtn');
+  btn.disabled=true;btn.textContent='Sending…';
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/index.html'});
+    if(error) throw error;
+    alertEl.innerHTML='<div class="alert alert-success">✅ Reset email sent! The user will receive a link to set their new password.</div>';
+    btn.textContent='Sent!';
+    setTimeout(()=>closeModal('resetPasswordModal'),2800);
+  }catch(e){
+    alertEl.innerHTML=`<div class="alert alert-error">${e.message}</div>`;
+    btn.disabled=false;btn.textContent='Send Reset Email';
+  }
+}
+
+/* ── DELETE USER ── */
+function confirmDeleteUser(id,name,role){
+  document.getElementById('deleteUserIdField').value=id;
+  document.getElementById('deleteUserRoleField').value=role;
+  document.getElementById('deleteUserNameDisplay').textContent=name;
+  document.getElementById('deleteUserSubtext').textContent=
+    role==='teacher'
+      ? '⚠ Removes the teacher profile. Their students and cards are kept.'
+      : '⚠ Also deletes ALL of this student\'s cards. Cannot be undone.';
+  document.getElementById('deleteUserAlert').innerHTML='';
+  openModal('deleteUserModal');
+}
+async function doDeleteUser(){
+  const id=document.getElementById('deleteUserIdField').value;
+  const role=document.getElementById('deleteUserRoleField').value;
+  const alertEl=document.getElementById('deleteUserAlert');
+  const btn=document.getElementById('deleteUserConfirmBtn');
+  btn.disabled=true;btn.textContent='Deleting…';
+  try{
+    if(role==='student'){
+      await sb.from('cards').delete().eq('student_id',id);
+      const student=allStudentsCache.find(s=>s.id===id);
+      await sb.from('students').delete().eq('id',id);
+      if(student?.auth_user_id) await sb.from('profiles').delete().eq('id',student.auth_user_id);
+    } else {
+      await sb.from('profiles').delete().eq('id',id);
+    }
+    closeModal('deleteUserModal');await loadAll();
+  }catch(e){
+    alertEl.innerHTML=`<div class="alert alert-error">${e.message}</div>`;
+    btn.disabled=false;btn.textContent='Yes, Delete';
+  }
+}
+
+/* ── STUDENTS ── */
+function renderStudentsTable(students,profiles,cards){
+  const tbody=document.querySelector('#studentsTable tbody');
+  if(!students.length){tbody.innerHTML='<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:2rem">No students yet.</td></tr>';return;}
+  tbody.innerHTML=students.map(s=>{
+    const teacher=profiles.find(p=>p.id===s.teacher_id);
+    const cnt=cards.filter(c=>c.student_id===s.id).length;
+    return `<tr>
+      <td>${escHtml(s.name)}</td>
+      <td style="color:var(--text-muted)">${escHtml(teacher?.name||'—')}</td>
+      <td style="color:var(--text-muted);font-size:0.8rem">${escHtml(s.login_email||'—')}</td>
+      <td>${cnt}</td>
+      <td style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" style="border-color:rgba(200,160,0,0.4);color:#ffe080;"
+          onclick="openEditStudent('${s.id}','${escJs(s.name)}','${escJs(s.login_email||'')}','${escJs(s.auth_user_id||'')}')">✏ Edit</button>
+        <button class="btn btn-outline btn-sm" style="border-color:rgba(80,200,120,0.4);color:#80d4a0;"
+          onclick="openResetPassword('${escJs(s.login_email||'')}','${escJs(s.name)}')">🔑 Reset PW</button>
+        <button class="btn btn-danger btn-sm"
+          onclick="confirmDeleteUser('${s.id}','${escJs(s.name)}','student')">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function openEditStudent(id,name,email,authUserId){
+  document.getElementById('editStudentId').value=id;
+  document.getElementById('editStudentAuthId').value=authUserId||'';
+  document.getElementById('editStudentName').value=name;
+  document.getElementById('editStudentEmail').value=email;
+  document.getElementById('editStudentPassword').value='';
+  document.getElementById('editStudentAlert').innerHTML='';
+  openModal('editStudentModal');
+}
+async function saveEditStudent(){
+  const id=document.getElementById('editStudentId').value;
+  const authId=document.getElementById('editStudentAuthId').value;
+  const name=document.getElementById('editStudentName').value.trim();
+  const email=document.getElementById('editStudentEmail').value.trim();
+  const password=document.getElementById('editStudentPassword').value;
+  const alertEl=document.getElementById('editStudentAlert');
+  if(!name||!email){alertEl.innerHTML='<div class="alert alert-error">Name and email required.</div>';return;}
+  const btn=document.getElementById('editStudentSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    await sb.from('students').update({name,login_email:email}).eq('id',id);
+    if(authId) await sb.from('profiles').update({name,email}).eq('id',authId);
+    // Update password via Edge Function if provided
+    if(password && password.length>=6 && authId){
+      const {data:{session:currentSession}}=await sb.auth.getSession();
+      const token=currentSession?.access_token;
+      const res=await fetch(`${SUPABASE_URL}/functions/v1/update-user-password`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body:JSON.stringify({userId:authId,newPassword:password}),
+      });
+      if(!res.ok){const err=await res.json();throw new Error(err.error||'Password update failed');}
+    } else if(password && password.length>0){
+      throw new Error('Password must be at least 6 characters.');
+    }
+    alertEl.innerHTML='<div class="alert alert-success">Student updated!</div>';
+    await loadAll();btn.disabled=false;btn.textContent='Save Changes';
+    setTimeout(()=>closeModal('editStudentModal'),1200);
+  }catch(e){alertEl.innerHTML=`<div class="alert alert-error">${e.message}</div>`;btn.disabled=false;btn.textContent='Save Changes';}
+}
+
+/* ── CARDS ── */
+function renderAllCards(cards){
+  const grid=document.getElementById('allCardsGrid');
+  if(!cards.length){grid.innerHTML='<div class="empty-state" style="width:100%"><div class="empty-icon">🃏</div>No cards yet.</div>';return;}
+  grid.innerHTML=cards.map(c=>`
+    <div style="position:relative">
+      ${Dashboard.renderCard(c,c.students?.name||'')}
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" style="border-color:rgba(200,160,0,0.4);color:#ffe080;"
+          onclick="openEditCard('${c.id}')">✏ Edit</button>
+        <button class="btn btn-outline btn-sm" style="border-color:rgba(80,160,255,0.4);color:#80b8ff;"
+          onclick="quickRegenImage('${c.id}','${escJs(c.card_name||'')}','${escJs(c.type||'')}')">🎨 New Image</button>
+        <button class="btn btn-danger btn-sm"
+          onclick="confirmDeleteCard('${c.id}','${escJs(c.card_name||'')}')">🗑 Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function openEditCard(cardId){
+  const {data:card,error}=await sb.from('cards').select('*').eq('id',cardId).single();
+  if(error||!card){alert('Could not load card.');return;}
+  document.getElementById('editCardId').value=card.id;
+  document.getElementById('editCardName').value=card.card_name||'';
+  document.getElementById('editCardHp').value=card.hp||'';
+  document.getElementById('editCardDesc').value=card.description||'';
+  document.getElementById('editCardMove1Name').value=card.move1_name||'';
+  document.getElementById('editCardMove1Dmg').value=card.move1_dmg||'';
+  document.getElementById('editCardMove2Name').value=card.move2_name||'';
+  document.getElementById('editCardMove2Dmg').value=card.move2_dmg||'';
+  document.getElementById('editCardImageUrl').value=card.image_url||'';
+  document.getElementById('editCardAlert').innerHTML='';
+  openModal('editCardModal');
+}
+async function saveEditCard(){
+  const id=document.getElementById('editCardId').value;
+  const alertEl=document.getElementById('editCardAlert');
+  const btn=document.getElementById('editCardSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    const updates={
+      card_name:document.getElementById('editCardName').value.trim(),
+      hp:parseInt(document.getElementById('editCardHp').value),
+      description:document.getElementById('editCardDesc').value.trim(),
+      move1_name:document.getElementById('editCardMove1Name').value.trim(),
+      move1_dmg:parseInt(document.getElementById('editCardMove1Dmg').value),
+      move2_name:document.getElementById('editCardMove2Name').value.trim(),
+      move2_dmg:parseInt(document.getElementById('editCardMove2Dmg').value),
+      image_url:document.getElementById('editCardImageUrl').value.trim(),
+    };
+    const {error}=await sb.from('cards').update(updates).eq('id',id);
+    if(error) throw error;
+    alertEl.innerHTML='<div class="alert alert-success">Card saved!</div>';
+    await loadAll();btn.disabled=false;btn.textContent='Save Changes';
+    setTimeout(()=>closeModal('editCardModal'),1200);
+  }catch(e){alertEl.innerHTML=`<div class="alert alert-error">${e.message}</div>`;btn.disabled=false;btn.textContent='Save Changes';}
+}
+
+function regenCardImageInModal(){
+  const name=document.getElementById('editCardName').value.trim();
+  if(!name){alert('Fill in card name first.');return;}
+  const prompt=`A Pokemon-style character named ${name}. Full body, cartoon style, vibrant colours, pure white background, no text, no borders.`;
+  const url=AI.generateImageUrl(prompt);
+  document.getElementById('editCardImageUrl').value=url;
+  document.getElementById('editCardAlert').innerHTML='<div class="alert alert-success">New image URL generated — click Save Changes to apply.</div>';
+}
+
+async function quickRegenImage(cardId,cardName,cardType){
+  if(!confirm('Replace image for "'+cardName+'" with a freshly generated one?')) return;
+  const prompt=`A Pokemon-style character named ${cardName}, type: ${cardType||'SCHOLAR'}. Full body, cartoon style, vibrant colours, pure white background, no text, no borders.`;
+  const url=AI.generateImageUrl(prompt);
+  try{
+    const {error}=await sb.from('cards').update({image_url:url}).eq('id',cardId);
+    if(error) throw error;
+    await loadAll();
+  }catch(e){alert('Failed: '+e.message);}
+}
+
+function confirmDeleteCard(id,name){
+  document.getElementById('deleteCardIdField').value=id;
+  document.getElementById('deleteCardNameDisplay').textContent=name;
+  openModal('deleteCardModal');
+}
+async function doDeleteCard(){
+  const id=document.getElementById('deleteCardIdField').value;
+  const btn=document.getElementById('deleteCardConfirmBtn');btn.disabled=true;btn.textContent='Deleting…';
+  try{
+    const {error}=await sb.from('cards').delete().eq('id',id);
+    if(error) throw error;
+    closeModal('deleteCardModal');await loadAll();
+  }catch(e){alert('Delete failed: '+e.message);btn.disabled=false;btn.textContent='Yes, Delete Card';}
+}
+
+async function doSignOut(){await Auth.signOut();window.location.href='index.html';}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escJs(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+</script>
+</body>
+</html>

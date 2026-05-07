@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClassCard — My Collection</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ── PARCHMENT PAGE BODY ── */
+body {
+  background: linear-gradient(162deg, #f5e8c4 0%, #ede0b0 45%, #f0e4bc 100%);
+  min-height: 100vh;
+  font-family: Georgia, serif;
+}
+
+/* ── PAGE EDGE EFFECTS ── */
+.pg-edge-l {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 28px;
+  background: linear-gradient(90deg, rgba(70,35,5,0.25), transparent);
+  pointer-events: none; z-index: 10;
+}
+.pg-edge-r {
+  position: fixed; right: 0; top: 0; bottom: 0; width: 18px;
+  background: linear-gradient(270deg, rgba(70,35,5,0.18), transparent);
+  pointer-events: none; z-index: 10;
+}
+.pg-edge-t {
+  position: fixed; top: 0; left: 0; right: 0; height: 6px;
+  background: linear-gradient(180deg, rgba(70,35,5,0.3), transparent);
+  pointer-events: none; z-index: 10;
+}
+
+/* ── RULED LINES (parchment texture) ── */
+.pg-line {
+  position: fixed; left: 0; right: 0; height: 1px;
+  background: rgba(90,50,10,0.07); pointer-events: none; z-index: 1;
+}
+
+/* ── INK BLOBS ── */
+.ink-blob {
+  position: fixed; border-radius: 50%;
+  background: rgba(30,15,3,0.05); pointer-events: none; z-index: 1;
+}
+
+/* ── SITE HEADER — parchment themed ── */
+.site-header {
+  background: linear-gradient(180deg, rgba(90,40,10,0.18), rgba(90,40,10,0.08));
+  border-bottom: 2px solid rgba(90,50,10,0.2);
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.site-header .logo {
+  font-family: 'Cinzel', serif;
+  background: linear-gradient(135deg, #8a4010, #c8700a, #8a4010);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.3rem;
+}
+.user-pill {
+  background: rgba(90,40,10,0.15) !important;
+  border-color: rgba(90,40,10,0.25) !important;
+  color: #5a2e0a !important;
+}
+.role-badge.student {
+  background: rgba(90,40,10,0.12) !important;
+  color: #6a3a10 !important;
+  border-color: rgba(90,40,10,0.3) !important;
+}
+.btn-outline {
+  border-color: rgba(90,40,10,0.35) !important;
+  color: #5a2e0a !important;
+}
+.btn-outline:hover { background: rgba(90,40,10,0.1) !important; }
+
+/* ── PAGE CONTENT ── */
+.page { position: relative; z-index: 2; }
+
+/* ── SCRAPBOOK HEADER ── */
+.scrap-header {
+  text-align: center;
+  padding: 2rem 1rem 1.2rem;
+  border-bottom: 2px solid rgba(90,50,10,0.18);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.scrap-header-orn {
+  font-size: 14px; color: #8a5520; letter-spacing: 0.4em; opacity: 0.65; display: block;
+}
+.scrap-header-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  color: #3a1e06;
+  font-style: italic;
+  margin: 6px 0 3px;
+  text-shadow: 0 1px 0 rgba(255,230,180,0.8), 0 -1px 0 rgba(0,0,0,0.1);
+}
+.scrap-header-sub {
+  font-size: 0.75rem; color: #7a4820;
+  letter-spacing: 0.2em; text-transform: uppercase; margin-top: 4px;
+}
+.scrap-count {
+  display: inline-block;
+  background: rgba(90,50,10,0.1);
+  border: 1px solid rgba(90,50,10,0.25);
+  color: #5a2e0a;
+  font-size: 0.72rem; font-weight: 700;
+  padding: 3px 14px; border-radius: 20px;
+  margin-top: 0.6rem; letter-spacing: 0.08em;
+}
+
+/* ── FILTER BAR — styled as ink stamps ── */
+.filter-bar {
+  display: flex; gap: 8px; margin-bottom: 1.5rem;
+  flex-wrap: wrap; align-items: center;
+}
+.filter-label {
+  font-size: 0.7rem; color: #8a5520; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; font-style: italic;
+}
+.filter-chip {
+  padding: 4px 14px; border-radius: 3px;
+  border: 1.5px solid rgba(90,50,10,0.3);
+  background: rgba(255,248,220,0.6);
+  color: #6a3a10; font-size: 0.72rem; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+  font-family: 'Cinzel', serif; letter-spacing: 0.05em;
+}
+.filter-chip:hover { border-color: rgba(90,50,10,0.6); background: rgba(90,50,10,0.08); }
+.filter-chip.active {
+  border-color: #8a5020; background: rgba(90,50,10,0.15);
+  color: #3a1a04;
+}
+
+/* ── SCRAPBOOK CARDS GRID ── */
+.scrap-grid {
+  display: flex; flex-wrap: wrap;
+  gap: 2rem 1.5rem;
+  justify-content: flex-start;
+  padding: 0.5rem 0 2rem;
+}
+
+/* ── SCRAPBOOK SLOT ── */
+.scrap-slot {
+  position: relative;
+  background: rgba(255,248,222,0.65);
+  border: 1px solid rgba(90,50,10,0.18);
+  border-radius: 2px;
+  padding: 13px 13px 16px;
+  box-shadow: 2px 3px 12px rgba(0,0,0,0.09), inset 0 1px 0 rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.scrap-slot:hover {
+  transform: translateY(-3px) rotate(0.3deg);
+  box-shadow: 4px 8px 20px rgba(0,0,0,0.14);
+}
+.scrap-slot.rot-l { transform: rotate(-1.2deg); }
+.scrap-slot.rot-r { transform: rotate(1.1deg); }
+.scrap-slot.rot-l:hover { transform: rotate(-1.2deg) translateY(-3px); }
+.scrap-slot.rot-r:hover { transform: rotate(1.1deg) translateY(-3px); }
+
+/* Tape strips */
+.tape {
+  position: absolute; width: 44px; height: 15px;
+  background: rgba(200,175,130,0.48);
+  border-radius: 2px; pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.tape-tl { top: -7px; left: 14px; transform: rotate(var(--r, -3deg)); }
+.tape-tr { top: -7px; right: 14px; transform: rotate(var(--r, 3deg)); }
+
+/* Stamp marks */
+.stamp {
+  position: absolute; padding: 3px 8px;
+  border: 1.5px solid rgba(90,50,10,0.4);
+  border-radius: 2px;
+  font-size: 7.5px; color: #7a4820;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  font-style: italic; transform: rotate(var(--r, 4deg));
+  font-family: 'Cinzel', serif;
+}
+
+/* ── MINI CARD INSIDE SLOT ── */
+.mini-card {
+  width: 220px; height: 110px;
+  border-radius: 10px; position: relative;
+  overflow: hidden; margin-bottom: 8px;
+  border: 2px solid #c8a000;
+}
+.mc-common { background: linear-gradient(160deg,#f5e97a,#e8c830,#ffe680); }
+.mc-silver  { background: linear-gradient(160deg,#d8e4ee,#a8bfcf,#c0d4e4); border-color:#7a9ab0; }
+.mc-gold    { background: linear-gradient(160deg,#ffe090,#f0b020,#ffdc80); border-color:#c07800; }
+.mc-prism   {
+  background: linear-gradient(135deg,#ffb3b3,#ffd9a0,#ffffa0,#b3ffb3,#a0e8ff,#b3b3ff,#ffb3e8);
+  border-color: #c080ff;
+  animation: prismShift 3s ease-in-out infinite;
+}
+@keyframes prismShift { 0%,100%{filter:hue-rotate(0deg)} 50%{filter:hue-rotate(25deg) brightness(1.1)} }
+
+.mc-img {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 48px; height: 48px;
+  background: rgba(255,255,255,0.38); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.mc-name { position: absolute; bottom: 5px; left: 6px; font-size: 7.5px; font-weight: bold; color: #1a0800; font-family: 'Cinzel', serif; }
+.mc-rar  { position: absolute; top: 5px; right: 6px; font-size: 6.5px; color: rgba(0,0,0,0.45); font-style: italic; }
+.hstar {
+  position: absolute; font-size: 8px;
+  animation: starPop 1.3s ease-in-out infinite;
+  color: rgba(200,160,0,0.8);
+}
+@keyframes starPop { 0%,100%{transform:scale(0.7);opacity:0.4} 50%{transform:scale(1.2);opacity:1} }
+
+/* ── HANDWRITTEN ANNOTATION ── */
+.annot {
+  font-size: 10px; color: #5a3218;
+  font-style: italic; line-height: 1.55;
+}
+.annot .a-star { color: #c8a000; }
+.annot-date {
+  font-size: 8px; color: #9a6030; margin-top: 3px;
+}
+.annot-name {
+  font-size: 9px; color: #3a1e06;
+  font-family: 'Cinzel', serif; margin-bottom: 4px;
+  font-style: normal;
+}
+
+/* ── EMPTY STATE — parchment style ── */
+.empty-parchment {
+  width: 100%; text-align: center; padding: 4rem 2rem;
+  color: #8a5520; font-style: italic;
+}
+.empty-parchment .ep-orn { font-size: 2rem; opacity: 0.25; margin-bottom: 1rem; }
+.empty-parchment p { font-size: 0.9rem; line-height: 1.7; color: #7a4820; }
+
+/* ── WAX SEAL & PAGE NUM ── */
+.page-footer {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 0.5rem 1.5rem 2rem; margin-top: 1rem;
+  border-top: 1px solid rgba(90,50,10,0.14);
+}
+.page-num {
+  font-size: 9px; color: #8a5520; font-style: italic; opacity: 0.7;
+}
+.wax-seal {
+  width: 42px; height: 42px;
+  background: radial-gradient(circle at 38% 34%,#c82020,#7a0c0c);
+  border-radius: 50%; border: 2px solid #a01010;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: rgba(255,180,180,0.85);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.whisper {
+  font-size: 8.5px; color: #7a4820; font-style: italic;
+  transform: rotate(-2deg); display: inline-block;
+  opacity: 0.65;
+}
+
+/* ── CARD DETAIL MODAL — parchment ── */
+.modal-backdrop { background: rgba(20,10,2,0.65) !important; }
+.modal {
+  background: linear-gradient(160deg, #f8ecd4, #f0e0c0) !important;
+  border: 2px solid rgba(90,50,10,0.25) !important;
+  color: #3a1e06 !important;
+}
+.modal-close { color: #8a5520 !important; }
+.modal-close:hover { color: #3a1e06 !important; background: rgba(90,50,10,0.1) !important; }
+.card-modal-info h3 { color: #5a2e0a !important; font-family: 'Cinzel', serif; }
+.info-row { border-bottom-color: rgba(90,50,10,0.18) !important; }
+.info-label { color: #8a5520 !important; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .scrap-grid { justify-content: center; }
+  .mini-card { width: 200px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Parchment edge effects -->
+<div class="pg-edge-l"></div>
+<div class="pg-edge-r"></div>
+<div class="pg-edge-t"></div>
+<div class="pg-line" style="top:90px"></div>
+<div class="pg-line" style="top:180px"></div>
+<div class="pg-line" style="top:270px"></div>
+<div class="pg-line" style="top:360px"></div>
+<div class="pg-line" style="top:450px"></div>
+<div class="pg-line" style="top:540px"></div>
+<div class="pg-line" style="top:630px"></div>
+<div class="pg-line" style="top:720px"></div>
+<div class="ink-blob" style="width:80px;height:40px;top:140px;right:60px;transform:rotate(18deg)"></div>
+<div class="ink-blob" style="width:50px;height:28px;top:420px;left:40px;transform:rotate(-12deg)"></div>
+<div class="ink-blob" style="width:60px;height:25px;top:680px;right:120px;transform:rotate(7deg)"></div>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;max-width:1200px;margin:0 auto;width:100%">
+    <a href="#" class="logo">✦ ClassCard</a>
+    <div style="display:flex;align-items:center;gap:1rem">
+      <span class="user-pill" id="userPill">…</span>
+      <span class="role-badge student">Student</span>
+      <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+</header>
+
+<div class="page" style="max-width:1200px;margin:0 auto;padding:0 1.5rem 4rem">
+
+  <!-- SCRAPBOOK HEADER -->
+  <div class="scrap-header">
+    <span class="scrap-header-orn">— ✦ —</span>
+    <div class="scrap-header-title" id="pageTitle">My Collection of Cards</div>
+    <div class="scrap-header-sub" id="pageSubtitle">Your reward cards earned from your teacher</div>
+    <div class="scrap-count" id="cardCountBadge">Loading…</div>
+    <span class="scrap-header-orn" style="margin-top:6px">— ✦ —</span>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <span class="filter-label">Filter by rarity:</span>
+    <button class="filter-chip active" onclick="filterCards('all',this)">All</button>
+    <button class="filter-chip" onclick="filterCards('common',this)">⭐ Common</button>
+    <button class="filter-chip" onclick="filterCards('silver',this)">✦ Silver</button>
+    <button class="filter-chip" onclick="filterCards('gold-rare',this)">★ Gold Rare</button>
+    <button class="filter-chip" onclick="filterCards('prismatic',this)">✦✦ Prismatic</button>
+  </div>
+
+  <!-- ARENA BUTTON -->
+  <div style="text-align:right;margin-bottom:1rem;">
+    <a href="arena.html" style="
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 22px;
+      background:linear-gradient(135deg,#1a1030,#2a1a50,#1a1030);
+      border:2px solid rgba(120,80,220,0.6);
+      border-radius:8px;
+      color:#c0a0ff;
+      font-family:'Cinzel',serif;
+      font-size:0.78rem;
+      font-weight:700;
+      letter-spacing:0.1em;
+      text-decoration:none;
+      transition:all 0.2s;
+      box-shadow:0 4px 20px rgba(100,60,200,0.2);
+    " onmouseover="this.style.boxShadow='0 4px 30px rgba(150,80,255,0.4)';this.style.borderColor='rgba(160,100,255,0.8)'"
+       onmouseout="this.style.boxShadow='0 4px 20px rgba(100,60,200,0.2)';this.style.borderColor='rgba(120,80,220,0.6)'">
+      ⚔ Enter the Battle Arena
+    </a>
+  </div>
+
+  <!-- CARDS SCRAPBOOK GRID -->
+  <div class="scrap-grid" id="cardsGrid">
+    <div class="empty-parchment">
+      <div class="ep-orn">📜</div>
+      <p>Loading your collection…</p>
+    </div>
+  </div>
+
+  <!-- PAGE FOOTER -->
+  <div class="page-footer">
+    <div>
+      <div class="whisper">"Keep collecting, young scholar…"</div>
+    </div>
+    <div class="wax-seal">✦</div>
+    <div class="page-num" id="pageNum"></div>
+  </div>
+
+</div>
+
+<!-- CARD DETAIL MODAL -->
+<div class="modal-backdrop hidden" id="cardModal">
+  <div class="modal" style="max-width:660px">
+    <button class="modal-close" onclick="closeCardModal()">✕</button>
+    <div class="card-modal-body" id="cardModalBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabaseClient.js"></script>
+<script src="auth.js"></script>
+<script src="dashboard.js"></script>
+<script>
+let session = null;
+let allCards = [];
+let studentRecord = null;
+
+const rotations = ['rot-l','rot-r','','rot-l','rot-r','rot-r','','rot-l'];
+const tapeAngles = [[-4,3],[-3,4],[3,-2],[-5,2],[2,-4],[-3,5],[4,-3],[-2,3]];
+
+const rarityInfo = {
+  common:     { label:'◆ Common',     starColor:'rgba(200,160,0,0.8)',  stars:['✦','✦'], starClass:'mc-common' },
+  silver:     { label:'✦ Silver',     starColor:'rgba(120,180,220,0.9)', stars:['✦','✧','⋆'], starClass:'mc-silver' },
+  'gold-rare':{ label:'★ Gold Rare',  starColor:'rgba(255,200,0,0.9)', stars:['★','✦','◆'], starClass:'mc-gold' },
+  prismatic:  { label:'✦✦ Prismatic', starColor:'rgba(200,100,255,0.9)', stars:['★','✦','✶','◆'], starClass:'mc-prism' },
+};
+
+(async () => {
+  session = await Auth.requireAuth('student');
+  if (!session) return;
+
+  const name = session.profile.name || session.user.email;
+  document.getElementById('userPill').textContent = name;
+  document.getElementById('pageTitle').textContent = name + "'s Card Collection";
+  document.getElementById('pageSubtitle').textContent = 'Your reward cards, gathered in this ancient tome';
+
+  const { data: student } = await sb
+    .from('students').select('*').eq('auth_user_id', session.user.id).single();
+
+  if (!student) {
+    document.getElementById('cardsGrid').innerHTML = `
+      <div class="empty-parchment">
+        <div class="ep-orn">📜</div>
+        <p>No student record found.<br>Ask your teacher to set up your account.</p>
+      </div>`;
+    document.getElementById('cardCountBadge').textContent = '0 cards';
+    return;
+  }
+
+  studentRecord = student;
+  await loadCards();
+})();
+
+async function loadCards() {
+  allCards = await Dashboard.getStudentCards(studentRecord.id);
+  updateBadge(allCards);
+  renderScrapbook(allCards);
+}
+
+function updateBadge(cards) {
+  const g = cards.filter(c=>c.rarity==='gold-rare').length;
+  const s = cards.filter(c=>c.rarity==='silver').length;
+  const c = cards.filter(c=>c.rarity==='common').length;
+  const p = cards.filter(c=>c.rarity==='prismatic').length;
+  let txt = `${cards.length} card${cards.length!==1?'s':''}`;
+  if (g) txt += ` · ${g} ★`;
+  if (p) txt += ` · ${p} ✦✦`;
+  if (s) txt += ` · ${s} ✦`;
+  if (c) txt += ` · ${c} ⭐`;
+  document.getElementById('cardCountBadge').textContent = txt;
+  document.getElementById('pageNum').textContent = `~ ${cards.length} entr${cards.length!==1?'ies':'y'} in this tome ~`;
+}
+
+function renderScrapbook(cards) {
+  const grid = document.getElementById('cardsGrid');
+  if (!cards.length) {
+    grid.innerHTML = `
+      <div class="empty-parchment">
+        <div class="ep-orn">📜</div>
+        <p>No cards in this collection yet.<br><em>Keep up the great work and your teacher will award you a card!</em></p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = cards.map((card, i) => {
+    const r = rarityInfo[card.rarity] || rarityInfo.common;
+    const rot = rotations[i % rotations.length];
+    const [ta, tb] = tapeAngles[i % tapeAngles.length];
+    const date = new Date(card.created_at).toLocaleDateString('en-NZ', {day:'numeric',month:'long',year:'numeric'});
+    const studentName = session.profile.name || '';
+
+    // Build star HTML
+    const starColors = card.rarity === 'prismatic'
+      ? ['rgba(255,100,200,0.9)','rgba(100,200,255,0.9)','rgba(200,100,255,0.9)','rgba(255,255,80,0.9)']
+      : card.rarity === 'gold-rare'
+      ? ['rgba(255,200,0,0.9)','rgba(255,220,60,0.9)','rgba(255,240,120,0.9)']
+      : card.rarity === 'silver'
+      ? ['rgba(120,180,220,0.9)','rgba(180,220,255,0.9)','rgba(200,230,255,0.9)']
+      : ['rgba(200,160,0,0.8)','rgba(200,160,0,0.6)'];
+
+    const starSyms = card.rarity === 'prismatic' ? ['★','✦','✶','◆']
+      : card.rarity === 'gold-rare' ? ['★','✦','◆']
+      : card.rarity === 'silver' ? ['✦','✧','⋆']
+      : ['✦','✦'];
+
+    const starPositions = [
+      'top:5px;left:5px','top:14px;right:7px','bottom:18px;left:7px','bottom:28px;right:20px',
+    ];
+    let starsHtml = '';
+    starPositions.slice(0, Math.min(r.stars.length, starPositions.length)).forEach((pos, si) => {
+      starsHtml += `<div class="hstar" style="${pos};color:${starColors[si]||starColors[0]};animation-delay:${si*0.25}s">${starSyms[si]||'✦'}</div>`;
+    });
+
+    // Stamp for rare cards
+    const stamp = card.rarity === 'prismatic'
+      ? `<div class="stamp" style="bottom:10px;left:-8px;--r:-5deg;color:#8a20a0;border-color:#8a20a0">Legendary</div>`
+      : card.rarity === 'gold-rare'
+      ? `<div class="stamp" style="bottom:8px;left:-8px;--r:-4deg;color:#8a5000;border-color:#8a5000">Rare!</div>`
+      : '';
+
+    return `
+<div class="scrap-slot ${rot}" onclick="openDetail('${card.id}')">
+  <div class="tape tape-tl" style="--r:${ta}deg"></div>
+  <div class="tape tape-tr" style="--r:${tb}deg"></div>
+  ${stamp}
+  <div class="mini-card ${r.starClass}">
+    <div class="mc-img">${card.image_url ? `<img src="${card.image_url}" style="width:100%;height:100%;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">` : '🎭'}</div>
+    <div class="mc-rar">${r.label}</div>
+    <div class="mc-name">${escHtml(card.card_name)}</div>
+    ${starsHtml}
+  </div>
+  <div class="annot-name">${escHtml(card.card_name)}</div>
+  <div class="annot">
+    <span class="a-star">${card.rarity === 'prismatic' ? '✦✦' : card.rarity === 'gold-rare' ? '★' : '✦'}</span>
+    ${escHtml(card.description)}
+  </div>
+  <div class="annot-date">${date} · HP ${card.hp}</div>
+</div>`;
+  }).join('');
+}
+
+function filterCards(rarity, btn) {
+  document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = rarity === 'all' ? allCards : allCards.filter(c => c.rarity === rarity);
+  renderScrapbook(filtered);
+}
+
+function openDetail(cardId) {
+  const card = allCards.find(c => c.id === cardId);
+  if (!card) return;
+  const r = rarityInfo[card.rarity] || rarityInfo.common;
+  const studentName = session.profile.name || '';
+  const date = new Date(card.created_at).toLocaleDateString('en-NZ', {day:'numeric',month:'long',year:'numeric'});
+
+  document.getElementById('cardModalBody').innerHTML = `
+    ${Dashboard.renderCard(card, studentName)}
+    <div class="card-modal-info">
+      <h3>${escHtml(card.card_name)}</h3>
+      <p style="font-style:italic;color:#7a4820;font-size:0.82rem;margin-bottom:1rem">"${escHtml(card.description)}"</p>
+      <div class="info-row"><span class="info-label">Rarity</span><span>${r.label}</span></div>
+      <div class="info-row"><span class="info-label">HP</span><span>${card.hp}</span></div>
+      <div class="info-row"><span class="info-label">Type</span><span>${escHtml(card.type)}</span></div>
+      <div class="info-row"><span class="info-label">${escHtml(card.stat1_name)}</span><span>${card.stat1_val}</span></div>
+      <div class="info-row"><span class="info-label">${escHtml(card.stat2_name)}</span><span>${card.stat2_val}</span></div>
+      <div class="info-row"><span class="info-label">${escHtml(card.stat3_name)}</span><span>${card.stat3_val}</span></div>
+      <div class="info-row"><span class="info-label">${escHtml(card.move1_name)}</span><span>${card.move1_dmg} dmg</span></div>
+      <div class="info-row"><span class="info-label">${escHtml(card.move2_name)}</span><span>${card.move2_dmg} dmg</span></div>
+      <div class="info-row"><span class="info-label">Awarded</span><span>${date}</span></div>
+    </div>`;
+  document.getElementById('cardModal').classList.remove('hidden');
+}
+
+function closeCardModal() { document.getElementById('cardModal').classList.add('hidden'); }
+document.getElementById('cardModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('cardModal')) closeCardModal();
+});
+
+async function doSignOut() {
+  await Auth.signOut();
+  window.location.href = 'index.html';
+}
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

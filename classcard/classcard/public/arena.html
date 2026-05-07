@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassCard Battle Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'tumble': 'tumble 0.4s infinite linear',
+                        'shake': 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both',
+                        'shine': 'shine 3s infinite linear',
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        tumble: {
+                            '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+                            '100%': { transform: 'rotateX(360deg) rotateY(720deg) rotateZ(360deg)' },
+                        },
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '25%': { transform: 'translateX(-10px) rotate(-2deg)' },
+                            '50%': { transform: 'translateX(10px) rotate(2deg)' },
+                            '75%': { transform: 'translateX(-10px) rotate(-2deg)' },
+                        },
+                        shine: {
+                            '0%': { transform: 'translateX(-150%) rotate(45deg)' },
+                            '100%': { transform: 'translateX(150%) rotate(45deg)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .clip-hexagon { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+
+        /* ── CARD STYLES (inline — same as the rest of the app) ── */
+        .poke-card{width:260px;height:375px;border-radius:18px;position:relative;overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;border:3px solid #c8a000}
+        .poke-card.common{background:linear-gradient(160deg,#f5e97a 0%,#e8c830 40%,#f5e097 70%,#ffe680 100%);border-color:#c8a000}
+        .poke-card.silver{background:linear-gradient(160deg,#d8e4ee 0%,#a8bfcf 40%,#e0eaf2 70%,#c0d4e4 100%);border-color:#7a9ab0}
+        .poke-card.gold-rare{background:linear-gradient(160deg,#ffe090 0%,#f0b020 30%,#ffd060 60%,#e89010 80%,#ffdc80 100%);border-color:#c07800}
+        .poke-card.prismatic{background:linear-gradient(135deg,#ffb3b3 0%,#ffd9a0 14%,#ffffa0 28%,#b3ffb3 42%,#a0e8ff 57%,#b3b3ff 71%,#e8b3ff 85%,#ffb3e8 100%);border-color:#c080ff;animation:prismShift 4s ease-in-out infinite}
+        @keyframes prismShift{0%,100%{filter:hue-rotate(0deg) brightness(1.05)}50%{filter:hue-rotate(30deg) brightness(1.12)}}
+        .card-content{position:relative;z-index:10;height:100%;display:flex;flex-direction:column}
+        .card-header{padding:10px 12px 6px;display:flex;justify-content:space-between;align-items:center}
+        .card-name{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:#1a1000;text-shadow:0 1px 0 rgba(255,255,255,0.6);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .card-hp{font-size:10px;font-weight:800;color:#8b0000;background:rgba(255,255,255,0.6);padding:2px 7px;border-radius:10px}
+        .card-img-box{margin:0 10px;height:120px;background:rgba(255,255,255,0.35);border-radius:10px;border:2px solid rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+        .card-img-box img{width:100%;height:100%;object-fit:contain}
+        .card-type-badge{position:absolute;bottom:5px;right:7px;font-size:7px;font-weight:800;background:rgba(0,0,0,0.35);color:white;padding:2px 5px;border-radius:6px;letter-spacing:0.08em}
+        .card-desc{margin:5px 10px 3px;font-size:8px;color:#2a1800;background:rgba(255,255,255,0.42);padding:4px 7px;border-radius:6px;font-style:italic;line-height:1.4;border:1px solid rgba(255,255,255,0.5)}
+        .card-stats{margin:3px 10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px}
+        .stat-box{background:rgba(255,255,255,0.45);border-radius:5px;padding:4px 2px;text-align:center;border:1px solid rgba(255,255,255,0.5)}
+        .stat-label{font-size:6.5px;font-weight:800;color:#5a3a00;display:block}
+        .stat-val{font-size:13px;font-weight:900;color:#1a0800;display:block;font-family:'Cinzel',serif}
+        .card-move{margin:2px 10px;background:rgba(255,255,255,0.42);border-radius:7px;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.5)}
+        .move-name{font-size:8.5px;font-weight:700;color:#1a0800}
+        .move-dmg{font-size:13px;font-weight:900;color:#8b0000;font-family:'Cinzel',serif}
+        .card-footer{margin:auto 10px 7px;display:flex;justify-content:space-between;align-items:center;padding-top:3px}
+        .card-rarity-tag{font-size:7px;font-weight:700;color:#3a2200}
+        .card-student-name{font-size:7px;color:#5a3a00;font-style:italic;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .holo-star{position:absolute;pointer-events:none;animation:starPop 1.4s ease-in-out infinite;animation-delay:var(--delay,0s)}
+        @keyframes starPop{0%{transform:scale(0) rotate(0deg);opacity:0}40%{opacity:1}70%{transform:scale(1.3) rotate(20deg);opacity:0.9}100%{transform:scale(0) rotate(40deg);opacity:0}}
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen w-screen bg-slate-950 text-slate-100 font-sans p-2 md:p-3 flex flex-col items-center overflow-x-hidden relative">
+
+    <!-- INLINE ICONS -->
+    <svg style="display:none;">
+        <symbol id="icon-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></symbol>
+        <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+        <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+        <symbol id="icon-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 15h.01"/><path d="M15 15h.01"/></symbol>
+        <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+        <symbol id="icon-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+        <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+        <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+    </svg>
+
+    <!-- ERROR MSG -->
+    <div id="error-msg" class="hidden bg-red-900 border-l-4 border-red-500 p-2 mb-2 mt-2 rounded flex items-center max-w-2xl w-full text-sm shrink-0 z-10">
+        <span class="text-red-100" id="error-text"></span>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         SCREEN: SETUP  (Player 1 logged in,
+         picks opponent + opponent verifies)
+    ═══════════════════════════════════════ -->
+    <div id="screen-setup" class="w-full flex flex-col items-center">
+
+        <!-- Title -->
+        <div class="text-center mb-4 shrink-0 mt-2">
+            <h1 class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center gap-3">
+                <svg class="text-yellow-400 w-6 h-6"><use href="#icon-swords"></use></svg>
+                ClassCard Arena
+                <svg class="text-red-500 w-6 h-6"><use href="#icon-swords"></use></svg>
+            </h1>
+            <p class="text-slate-400 text-xs mt-1 tracking-widest uppercase">Powered by your card collection</p>
+        </div>
+
+        <div class="w-full max-w-4xl bg-slate-900 rounded-2xl shadow-2xl p-5 border border-slate-800 z-10">
+            <div class="grid md:grid-cols-2 gap-5">
+
+                <!-- PLAYER 1 PANEL -->
+                <div id="p1-panel" class="border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 bg-slate-800">
+                    <div id="p1-content">
+                        <!-- Loading state -->
+                        <div class="space-y-3">
+                            <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                            <p class="text-slate-400 text-sm">Loading your cards…</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PLAYER 2 PANEL -->
+                <div id="p2-panel" class="border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-red-400 bg-slate-800">
+                    <div id="p2-content">
+                        <svg class="mx-auto text-slate-500 w-8 h-8 mb-3"><use href="#icon-swords"></use></svg>
+                        <h3 class="text-base font-bold text-slate-300 mb-1">Choose Your Opponent</h3>
+                        <p class="text-slate-500 text-xs mb-4">Select a classmate, then they verify with their email</p>
+
+                        <!-- Student picker -->
+                        <div id="opponent-picker" class="space-y-3">
+                            <select id="opponent-select" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-400 transition-colors">
+                                <option value="">Loading students…</option>
+                            </select>
+                            <button onclick="selectOpponent()" class="w-full px-4 py-2 bg-red-700 hover:bg-red-600 rounded-lg font-bold text-sm transition-colors">
+                                Challenge This Student →
+                            </button>
+                        </div>
+
+                        <!-- Opponent verification form (shown after selection) -->
+                        <div id="opponent-verify" class="hidden space-y-3">
+                            <div class="bg-slate-700 rounded-lg p-3 text-left">
+                                <p class="text-xs text-slate-400 mb-1">Challenging:</p>
+                                <p class="font-bold text-white" id="opponent-name-display">—</p>
+                            </div>
+                            <p class="text-xs text-slate-400">Hand the device to <span id="opponent-name-inline" class="text-white font-bold">them</span> to verify their email:</p>
+                            <input id="opponent-email" type="email" placeholder="Their email address…"
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-400 transition-colors placeholder-slate-500">
+                            <div class="flex gap-2">
+                                <button onclick="cancelOpponent()" class="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs transition-colors">← Back</button>
+                                <button onclick="verifyOpponent()" id="verify-btn" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg font-bold text-xs transition-colors">
+                                    Verify &amp; Load Cards
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- START BUTTON -->
+            <div class="mt-5 flex justify-center">
+                <button id="btn-start-game" onclick="startGame()" disabled
+                    class="px-6 py-2 rounded-lg font-bold transition-all text-xs md:text-sm bg-slate-800 text-slate-500 cursor-not-allowed">
+                    ENTER THE ARENA
+                </button>
+            </div>
+        </div>
+
+        <!-- Back to student page -->
+        <a href="student.html" class="mt-4 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-xs transition-colors">
+            <svg class="w-4 h-4"><use href="#icon-arrow-left"></use></svg>
+            Back to My Collection
+        </a>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         SCREEN: BATTLE
+    ═══════════════════════════════════════ -->
+    <div id="screen-battle" class="hidden flex-1 w-full max-w-5xl flex flex-col items-center min-h-0 pb-1 z-10 pt-2">
+        <div class="bg-slate-900 border border-slate-700 rounded-full w-10 h-10 mb-2 shadow-[0_0_15px_rgba(250,204,21,0.3)] flex items-center justify-center z-20 shrink-0 text-sm text-yellow-500 animate-pulse font-black">VS</div>
+
+        <div class="flex-1 w-full flex justify-between items-center relative min-h-0">
+            <div class="absolute left-0 md:left-2 lg:-left-4 top-1/2 transform -translate-y-1/2 hidden sm:flex items-center justify-center pointer-events-none z-0 opacity-20 md:opacity-40">
+                <h1 class="transform -rotate-90 whitespace-nowrap text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 tracking-widest flex items-center">
+                    <svg class="mr-4 text-yellow-400 rotate-90 w-6 h-6"><use href="#icon-swords"></use></svg>
+                    CLASSCARD ARENA
+                    <svg class="ml-4 text-red-500 rotate-90 w-6 h-6"><use href="#icon-swords"></use></svg>
+                </h1>
+            </div>
+
+            <div id="p1-battle-area" class="w-1/2 flex justify-center h-full items-center z-10"></div>
+            <div id="center-overlay"></div>
+            <div id="idle-center-icon" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-0 hidden md:block">
+                <svg class="w-12 h-12 rotate-[-20deg] text-blue-500 opacity-20"><use href="#icon-zap"></use></svg>
+            </div>
+            <div id="p2-battle-area" class="w-1/2 flex justify-center h-full items-center z-10"></div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="w-full bg-slate-900 rounded-2xl border border-slate-700 flex flex-col md:flex-row overflow-hidden shadow-2xl z-10 shrink-0 h-36 md:h-32 mt-2">
+            <div class="w-full md:w-1/2 p-2 md:p-3 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 flex flex-col h-1/2 md:h-full">
+                <div class="flex justify-between items-center mb-1.5">
+                    <h3 id="turn-indicator" class="text-xs md:text-sm font-bold text-white">Player's Turn</h3>
+                    <button id="btn-roll" onclick="handleRollAttack()" class="py-1 px-3 rounded-md font-black text-xs flex items-center transition-all bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg active:scale-95">
+                        <svg class="mr-1 w-3.5 h-3.5"><use href="#icon-dice"></use></svg> ROLL
+                    </button>
+                </div>
+                <div id="moves-container" class="grid grid-cols-2 gap-2 flex-grow min-h-0"></div>
+            </div>
+            <div class="w-full md:w-1/2 p-2 bg-black flex flex-col h-1/2 md:h-full">
+                <h3 class="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-800 pb-1 flex items-center shrink-0">
+                    <svg class="mr-1 w-3 h-3"><use href="#icon-target"></use></svg> Action Log
+                </h3>
+                <div id="combat-log" class="flex-grow overflow-y-auto font-mono text-[10px] md:text-xs space-y-0.5 pr-1 mt-0.5"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         SCREEN: GAME OVER
+    ═══════════════════════════════════════ -->
+    <div id="screen-gameover" class="hidden w-full max-w-lg bg-slate-900 rounded-2xl shadow-2xl p-6 border-2 border-yellow-500 text-center relative overflow-hidden mt-6 z-10">
+        <div class="absolute inset-0 pointer-events-none flex justify-around opacity-30" id="confetti-container"></div>
+        <svg class="mx-auto text-yellow-400 mb-3 w-10 h-10"><use href="#icon-swords"></use></svg>
+        <h2 class="text-3xl font-black text-white mb-2">VICTORY!</h2>
+        <p id="winner-text" class="text-lg text-yellow-400 font-bold mb-5">Champion!</p>
+        <div class="flex gap-3 justify-center">
+            <button onclick="resetGame()" class="flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-5 rounded-xl transition-all hover:scale-105 text-sm">
+                <svg class="mr-2 w-4 h-4"><use href="#icon-refresh"></use></svg> Play Again
+            </button>
+            <a href="student.html" class="flex items-center bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-xl transition-all text-sm">
+                <svg class="mr-2 w-4 h-4"><use href="#icon-arrow-left"></use></svg> My Collection
+            </a>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    <script src="auth.js"></script>
+    <script>
+    // ══════════════════════════════════════════════════════
+    // STATE
+    // ══════════════════════════════════════════════════════
+    let gameState = 'SETUP';
+    let p1 = null;  // logged-in student
+    let p2 = null;  // opponent
+    let turn = 1;
+    let combatLog = [];
+    let winner = null;
+    let animatingCard = null;
+    let attackPhase = 'IDLE';
+    let diceRoll = 6;
+    let diceText = '';
+    let selectedMoveIndex = null;
+    let mathQuestions = [];
+    let currentQuestionIndex = 0;
+    let mathCorrectCount = 0;
+    let timeLeft = 20;
+    let timerInterval = null;
+    let rollInterval = null;
+
+    let sessionData = null;        // logged-in user's auth session
+    let myStudentRecord = null;    // logged-in student's students row
+    let allStudents = [];          // list of all students (for opponent picker)
+    let selectedOpponentStudent = null; // the chosen opponent's students row
+
+    // ══════════════════════════════════════════════════════
+    // INIT — require student auth, load own cards + student list
+    // ══════════════════════════════════════════════════════
+    (async () => {
+        sessionData = await Auth.requireAuth('student');
+        if (!sessionData) return;
+
+        // Get this student's record
+        const { data: student, error: sErr } = await sb
+            .from('students')
+            .select('*')
+            .eq('auth_user_id', sessionData.user.id)
+            .single();
+
+        if (sErr || !student) {
+            showError('Could not find your student record. Ask your teacher to set up your account.');
+            return;
+        }
+        myStudentRecord = student;
+
+        // Load this student's cards
+        const myCards = await loadCardsForStudent(student.id);
+        if (!myCards.length) {
+            showError('You have no cards yet! Earn some cards from your teacher first.');
+            return;
+        }
+
+        p1 = buildPlayerFromCards(sessionData.profile.name || student.name || 'Player 1', myCards);
+        renderP1Ready();
+
+        // Load ALL students for opponent picker (excluding self)
+        const { data: students } = await sb
+            .from('students')
+            .select('id, name, login_email, teacher_id')
+            .order('name');
+
+        allStudents = (students || []).filter(s => s.id !== myStudentRecord.id);
+        populateOpponentSelect();
+
+        updateStartBtn();
+    })();
+
+    // ══════════════════════════════════════════════════════
+    // SUPABASE CARD LOADING
+    // ══════════════════════════════════════════════════════
+    async function loadCardsForStudent(studentId) {
+        const { data: cards, error } = await sb
+            .from('cards')
+            .select('*')
+            .eq('student_id', studentId)
+            .order('created_at', { ascending: false });
+        if (error || !cards) return [];
+        return cards;
+    }
+
+    // Convert a Supabase cards array into the player object the game engine needs
+    function buildPlayerFromCards(playerName, cards) {
+        const rarityLabel = { common:'◆ Common', silver:'✦ Silver', 'gold-rare':'★ Gold Rare', prismatic:'✦✦ Prismatic' };
+        const rarityHp    = { common:50, silver:75, 'gold-rare':100, prismatic:150 };
+
+        const deck = cards.map(card => {
+            const hp = card.hp || rarityHp[card.rarity] || 80;
+            const moves = [
+                { name: card.move1_name || 'Quick Strike', damage: card.move1_dmg || 30 },
+                { name: card.move2_name || 'Special Attack', damage: card.move2_dmg || 60 },
+            ];
+
+            // Build the card HTML (same visual as the rest of the app)
+            const rarity = card.rarity || 'common';
+            const starColors = rarity === 'prismatic'
+                ? ['rgba(255,100,120,0.95)','rgba(80,200,255,0.95)','rgba(200,100,255,0.95)','rgba(255,255,80,0.95)']
+                : rarity === 'gold-rare'
+                ? ['rgba(255,220,60,0.95)','rgba(255,180,0,0.9)','rgba(255,255,140,0.95)']
+                : rarity === 'silver'
+                ? ['rgba(200,230,255,0.9)','rgba(180,210,255,0.85)','rgba(255,255,255,0.9)']
+                : [];
+            const starSyms = rarity === 'prismatic' ? ['★','✦','✶','◆']
+                : rarity === 'gold-rare' ? ['★','✦','◆']
+                : rarity === 'silver' ? ['✦','✧','⋆'] : [];
+            const starCount = rarity === 'prismatic' ? 20 : rarity !== 'common' ? 14 : 0;
+            let starsHtml = '';
+            for (let i = 0; i < starCount; i++) {
+                const x = (Math.random()*86+5).toFixed(1);
+                const y = (Math.random()*86+5).toFixed(1);
+                const sym = starSyms[i % starSyms.length];
+                const col = starColors[i % starColors.length];
+                const sz  = (Math.random()*5+7).toFixed(0);
+                const del = (Math.random()*2).toFixed(2);
+                const dur = (Math.random()*1.2+0.8).toFixed(2);
+                starsHtml += `<span class="holo-star" style="left:${x}%;top:${y}%;position:absolute;font-size:${sz}px;color:${col};text-shadow:0 0 8px ${col};animation-duration:${dur}s;--delay:${del}s">${sym}</span>`;
+            }
+            const holoHtml = rarity !== 'common' ? `
+                <div style="position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;border-radius:16px;opacity:0;transition:opacity 0.3s">
+                    ${starsHtml}
+                </div>` : '';
+            const sparkleStyle = rarity === 'common'
+                ? 'background:radial-gradient(ellipse at 30% 20%,rgba(255,255,180,0.5) 0%,transparent 50%),radial-gradient(ellipse at 70% 70%,rgba(255,220,0,0.3) 0%,transparent 40%);'
+                : '';
+
+            const imgHtml = card.image_url
+                ? `<img src="${card.image_url}" alt="${esc(card.card_name)}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">`
+                : '<div style="font-size:2rem;opacity:0.4">🎭</div>';
+
+            const cardHtml = `
+<div class="poke-card ${rarity}" style="pointer-events:none;margin:0 auto;">
+    <div style="position:absolute;inset:0;z-index:2;border-radius:16px;${sparkleStyle}pointer-events:none;opacity:0.3"></div>
+    ${holoHtml}
+    <div class="card-content">
+        <div class="card-header">
+            <div class="card-name">${esc(card.card_name)}</div>
+            <div class="card-hp">HP ${hp}</div>
+        </div>
+        <div class="card-img-box">
+            ${imgHtml}
+            <div class="card-type-badge">${esc(card.type||'SCHOLAR')}</div>
+        </div>
+        <div class="card-desc">${esc(card.description||'')}</div>
+        <div class="card-stats">
+            <div class="stat-box"><span class="stat-label">${esc(card.stat1_name||'')}</span><span class="stat-val">${card.stat1_val||''}</span></div>
+            <div class="stat-box"><span class="stat-label">${esc(card.stat2_name||'')}</span><span class="stat-val">${card.stat2_val||''}</span></div>
+            <div class="stat-box"><span class="stat-label">${esc(card.stat3_name||'')}</span><span class="stat-val">${card.stat3_val||''}</span></div>
+        </div>
+        <div class="card-move"><span class="move-name">${esc(moves[0].name)}</span><span class="move-dmg">${moves[0].damage}</span></div>
+        <div class="card-move"><span class="move-name">${esc(moves[1].name)}</span><span class="move-dmg">${moves[1].damage}</span></div>
+        <div class="card-footer">
+            <span class="card-rarity-tag">${rarityLabel[rarity]||''}</span>
+            <span class="card-student-name">Awarded to: ${esc(playerName)}</span>
+        </div>
+    </div>
+</div>`;
+
+            return {
+                id: card.id || `card-${Math.random().toString(36).substr(2,9)}`,
+                name: card.card_name || 'Unknown Card',
+                maxHp: hp, currentHp: hp,
+                moves,
+                cardHTML: cardHtml,
+            };
+        });
+
+        return { name: playerName, deck, fullDeck: deck, activeIndex: 0 };
+    }
+
+    // ══════════════════════════════════════════════════════
+    // SETUP UI
+    // ══════════════════════════════════════════════════════
+    function renderP1Ready() {
+        const panel = document.getElementById('p1-panel');
+        panel.className = 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-green-500 bg-green-500 bg-opacity-10';
+        document.getElementById('p1-content').innerHTML = `
+            <div class="space-y-2">
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-5 h-5 text-white"><use href="#icon-shield"></use></svg>
+                </div>
+                <h3 class="text-base font-bold text-green-400">${esc(p1.name)}</h3>
+                <p class="text-slate-300 text-sm">${p1.fullDeck.length} card${p1.fullDeck.length!==1?'s':''} loaded</p>
+                <div class="flex flex-wrap gap-1 justify-center mt-2">
+                    ${p1.fullDeck.slice(0,6).map(c=>`<span class="text-[9px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">${esc(c.name)}</span>`).join('')}
+                    ${p1.fullDeck.length>6?`<span class="text-[9px] text-slate-500">+${p1.fullDeck.length-6} more</span>`:''}
+                </div>
+                <p class="text-green-300 text-xs mt-2">✓ Ready to battle!</p>
+            </div>`;
+    }
+
+    function populateOpponentSelect() {
+        const sel = document.getElementById('opponent-select');
+        if (!allStudents.length) {
+            sel.innerHTML = '<option value="">No other students found</option>';
+            return;
+        }
+        sel.innerHTML = '<option value="">— Choose a classmate —</option>' +
+            allStudents.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+    }
+
+    function selectOpponent() {
+        const sel = document.getElementById('opponent-select');
+        const studentId = sel.value;
+        if (!studentId) return;
+        selectedOpponentStudent = allStudents.find(s => s.id === studentId);
+        if (!selectedOpponentStudent) return;
+        document.getElementById('opponent-picker').classList.add('hidden');
+        document.getElementById('opponent-verify').classList.remove('hidden');
+        document.getElementById('opponent-name-display').textContent = selectedOpponentStudent.name;
+        document.getElementById('opponent-name-inline').textContent = selectedOpponentStudent.name;
+        // Pre-fill email if we have it
+        if (selectedOpponentStudent.login_email) {
+            document.getElementById('opponent-email').value = selectedOpponentStudent.login_email;
+        }
+    }
+
+    function cancelOpponent() {
+        selectedOpponentStudent = null;
+        document.getElementById('opponent-verify').classList.add('hidden');
+        document.getElementById('opponent-picker').classList.remove('hidden');
+        document.getElementById('opponent-email').value = '';
+        const panel = document.getElementById('p2-panel');
+        panel.className = 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-red-400 bg-slate-800';
+        updateStartBtn();
+    }
+
+    async function verifyOpponent() {
+        const emailInput = document.getElementById('opponent-email').value.trim().toLowerCase();
+        const btn = document.getElementById('verify-btn');
+        if (!emailInput) { showError('Please enter the opponent\'s email address.'); return; }
+        if (!selectedOpponentStudent) return;
+
+        btn.disabled = true; btn.textContent = 'Verifying…'; showError('');
+
+        // Check email matches — look in profiles table
+        const { data: profile } = await sb
+            .from('profiles')
+            .select('id, email')
+            .eq('id', selectedOpponentStudent.auth_user_id)
+            .single();
+
+        const storedEmail = (profile?.email || selectedOpponentStudent.login_email || '').toLowerCase();
+        if (!storedEmail || emailInput !== storedEmail) {
+            showError('Email does not match. Please ask ' + selectedOpponentStudent.name + ' to enter their own email.');
+            btn.disabled = false; btn.textContent = 'Verify & Load Cards';
+            return;
+        }
+
+        // Load opponent cards
+        const oppCards = await loadCardsForStudent(selectedOpponentStudent.id);
+        if (!oppCards.length) {
+            showError(selectedOpponentStudent.name + ' has no cards yet and cannot battle.');
+            btn.disabled = false; btn.textContent = 'Verify & Load Cards';
+            return;
+        }
+
+        p2 = buildPlayerFromCards(selectedOpponentStudent.name, oppCards);
+
+        // Show opponent ready
+        const panel = document.getElementById('p2-panel');
+        panel.className = 'border-2 border-dashed rounded-xl p-5 text-center transition-colors border-green-500 bg-green-500 bg-opacity-10';
+        document.getElementById('p2-content').innerHTML = `
+            <div class="space-y-2">
+                <div class="w-10 h-10 bg-red-700 rounded-full flex items-center justify-center mx-auto">
+                    <svg class="w-5 h-5 text-white"><use href="#icon-swords"></use></svg>
+                </div>
+                <h3 class="text-base font-bold text-green-400">${esc(p2.name)}</h3>
+                <p class="text-slate-300 text-sm">${p2.fullDeck.length} card${p2.fullDeck.length!==1?'s':''} loaded</p>
+                <div class="flex flex-wrap gap-1 justify-center mt-2">
+                    ${p2.fullDeck.slice(0,6).map(c=>`<span class="text-[9px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">${esc(c.name)}</span>`).join('')}
+                    ${p2.fullDeck.length>6?`<span class="text-[9px] text-slate-500">+${p2.fullDeck.length-6} more</span>`:''}
+                </div>
+                <p class="text-green-300 text-xs mt-2">✓ Ready to battle!</p>
+            </div>`;
+
+        btn.disabled = false; btn.textContent = 'Verify & Load Cards';
+        updateStartBtn();
+    }
+
+    function updateStartBtn() {
+        const btn = document.getElementById('btn-start-game');
+        if (p1 && p2) {
+            btn.disabled = false;
+            btn.className = 'px-6 py-2 rounded-lg font-bold transition-all text-xs md:text-sm bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-400 hover:to-orange-500 text-white shadow-lg transform hover:scale-105';
+        } else {
+            btn.disabled = true;
+            btn.className = 'px-6 py-2 rounded-lg font-bold transition-all text-xs md:text-sm bg-slate-800 text-slate-500 cursor-not-allowed';
+        }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // HELPERS
+    // ══════════════════════════════════════════════════════
+    const shuffleArray = arr => {
+        const a = [...arr];
+        for (let i = a.length-1; i>0; i--) {
+            const j = Math.floor(Math.random()*(i+1));
+            [a[i],a[j]] = [a[j],a[i]];
+        }
+        return a;
+    };
+    const showError = msg => {
+        const el = document.getElementById('error-msg');
+        if (msg) { document.getElementById('error-text').innerText = msg; el.classList.remove('hidden'); }
+        else el.classList.add('hidden');
+    };
+    const addLog = (msg, cls='text-slate-300') => {
+        combatLog.unshift({ id: Date.now()+Math.random(), text: msg, className: cls });
+        renderLog();
+    };
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    // ══════════════════════════════════════════════════════
+    // SCREEN MANAGEMENT
+    // ══════════════════════════════════════════════════════
+    const updateUI = () => {
+        document.getElementById('screen-setup').classList.toggle('hidden', gameState !== 'SETUP');
+        document.getElementById('screen-battle').classList.toggle('hidden', gameState !== 'BATTLE');
+        document.getElementById('screen-gameover').classList.toggle('hidden', gameState !== 'GAMEOVER');
+        if (gameState === 'BATTLE') renderBattleUI();
+        if (gameState === 'GAMEOVER') renderGameoverUI();
+    };
+
+    // ══════════════════════════════════════════════════════
+    // BATTLE RENDERING (original game logic, unchanged)
+    // ══════════════════════════════════════════════════════
+    const renderActiveCardHtml = (playerState, isP1) => {
+        const activeCard = playerState.deck[playerState.activeIndex];
+        const isTurn = (isP1 && turn===1) || (!isP1 && turn===2);
+        const isAnim = animatingCard === (isP1 ? 'p1' : 'p2');
+        const pct = Math.max(0, Math.min(100, (activeCard.currentHp/activeCard.maxHp)*100));
+        const colorClass = pct<20 ? 'bg-red-500' : pct<50 ? 'bg-yellow-400' : 'bg-green-500';
+        const indicators = playerState.deck.map(c=>`<div class="w-2 h-2 rounded-full shadow-md ${c.currentHp>0?'bg-blue-400':'bg-gray-600'}" title="${esc(c.name)}"></div>`).join('');
+        const cardVisual = activeCard.cardHTML
+            ? `<div class="w-full flex justify-center items-start mt-2 scale-[0.55] sm:scale-[0.7] md:scale-[0.8] origin-top h-[220px] sm:h-[280px] md:h-[330px]">${activeCard.cardHTML}</div>`
+            : `<div class="w-36 h-48 bg-gradient-to-br from-indigo-900 to-purple-900 rounded-xl p-3 flex flex-col justify-between shadow-lg border border-indigo-500">
+                   <div><h3 class="text-sm font-bold text-white">${esc(activeCard.name)}</h3></div>
+                   <div class="flex-grow flex items-center justify-center text-4xl">👾</div>
+               </div>`;
+        return `
+<div class="relative flex flex-col items-center p-2 sm:p-3 bg-slate-800 rounded-2xl border-4 ${isTurn?'border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]':'border-slate-600'} transition-all duration-300 ${isAnim?'animate-shake':''} w-full max-w-[280px] md:max-w-[320px]">
+    <div class="absolute top-1.5 right-1.5 flex space-x-1 z-20">${indicators}</div>
+    <h2 class="text-xs md:text-sm font-bold text-gray-300 mb-1 z-20">${esc(playerState.name)}'s</h2>
+    <h3 class="text-sm md:text-base font-black text-white mb-1 z-20 text-center leading-tight">${esc(activeCard.name)}</h3>
+    <div class="w-full flex items-center gap-2 mb-2 z-20">
+        <span class="text-xs font-bold text-slate-300 shrink-0">${activeCard.currentHp}/${activeCard.maxHp} HP</span>
+        <div class="flex-1 h-2.5 bg-slate-700 rounded-full overflow-hidden"><div class="h-full ${colorClass} rounded-full transition-all duration-500" style="width:${pct}%"></div></div>
+    </div>
+    ${cardVisual}
+</div>`;
+    };
+
+    const renderBattleUI = () => {
+        if (!p1 || !p2) return;
+        document.getElementById('p1-battle-area').innerHTML = renderActiveCardHtml(p1, true);
+        document.getElementById('p2-battle-area').innerHTML = renderActiveCardHtml(p2, false);
+        const activePlayer = turn===1 ? p1 : p2;
+        document.getElementById('turn-indicator').innerText = `${activePlayer.name}'s Turn`;
+        const activeCard = activePlayer.deck[activePlayer.activeIndex];
+        let movesHtml = '';
+        activeCard.moves.forEach((move,i) => {
+            const isSel = selectedMoveIndex===i;
+            const isDim = selectedMoveIndex!==null && !isSel;
+            const wCls = isSel ? 'bg-indigo-900 border-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.5)]' : isDim ? 'bg-slate-800 border-slate-700 opacity-40' : 'bg-slate-700 border-slate-600';
+            const shine = isSel ? `<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 animate-shine"></div>` : '';
+            movesHtml += `<div class="border rounded-lg p-1.5 text-left transition-all relative overflow-hidden flex flex-col justify-center ${wCls}">${shine}
+                <div class="text-[9px] font-bold text-slate-400 leading-none mb-0.5">${i===0?'Evens':'Odds'}</div>
+                <div class="font-bold text-[11px] md:text-xs text-white truncate">${esc(move.name)}</div>
+                <div class="text-yellow-400 font-black text-[10px] flex items-center mt-auto pt-1"><svg class="w-2.5 h-2.5 mr-1"><use href="#icon-zap"></use></svg> ${move.damage} DMG</div>
+            </div>`;
+        });
+        document.getElementById('moves-container').innerHTML = movesHtml;
+        renderCenterOverlay();
+    };
+
+    const renderCenterOverlay = () => {
+        const overlay = document.getElementById('center-overlay');
+        if (attackPhase==='IDLE') { overlay.innerHTML=''; return; }
+        if (attackPhase==='ROLLING_MOVE'||attackPhase==='MOVE_SELECTED') {
+            const isRolling = attackPhase==='ROLLING_MOVE';
+            overlay.innerHTML = `<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none flex flex-col items-center perspective-1000">
+                <div class="bg-slate-900 bg-opacity-95 border-4 border-slate-700 rounded-2xl p-5 shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col items-center text-center min-w-[180px]">
+                    <div class="transform-style-3d mb-3">
+                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-800 border-4 rounded-xl transition-all duration-200 ${isRolling?'border-indigo-400 animate-tumble blur-[1px]':'border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.6)] scale-110'}">
+                            <span class="text-4xl font-black text-white drop-shadow-lg ${isRolling?'opacity-50':'opacity-100'}">${diceRoll}</span>
+                        </div>
+                    </div>
+                    <span class="text-sm font-black tracking-widest uppercase ${isRolling?'text-slate-300 animate-pulse':'text-white'}">${diceText}</span>
+                    <span class="text-[9px] text-slate-400 mt-1 tracking-widest uppercase font-bold">Move Selection Roll</span>
+                </div></div>`;
+            return;
+        }
+        if (attackPhase==='MATH_CHALLENGE') {
+            const q = mathQuestions[currentQuestionIndex];
+            const timeColor = timeLeft<=5 ? 'text-red-500 animate-pulse' : 'text-yellow-400';
+            overlay.innerHTML = `<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center">
+                <div class="bg-slate-900 bg-opacity-95 border-4 border-indigo-500 rounded-2xl p-4 md:p-6 shadow-[0_0_60px_rgba(99,102,241,0.8)] flex flex-col items-center text-center w-[280px] md:w-[320px]">
+                    <div class="flex justify-between items-center w-full mb-3">
+                        <span id="math-timer" class="text-xl font-black flex items-center ${timeColor}"><svg class="w-6 h-6 mr-1"><use href="#icon-timer"></use></svg> ${timeLeft}s</span>
+                        <span id="math-score-text" class="text-lg font-bold text-green-400 bg-green-900 bg-opacity-30 px-3 py-1 rounded-lg">${mathCorrectCount} / 12</span>
+                    </div>
+                    <div class="text-xs text-slate-400 mb-1 uppercase tracking-widest font-bold">Multiplier Challenge</div>
+                    <div id="math-question-text" class="text-5xl font-black text-white drop-shadow-md mb-6">${q?q.q:''}</div>
+                    <form id="math-form" class="w-full flex gap-2">
+                        <input id="math-input" type="number" autocomplete="off" class="w-full text-center text-3xl font-black p-2 rounded-xl bg-slate-800 text-white border-2 border-slate-600 focus:outline-none focus:border-indigo-400 transition-all" placeholder="?" />
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 rounded-xl shadow-lg transition-transform active:scale-95">GO</button>
+                    </form>
+                    <p class="text-[10px] text-slate-500 mt-3">Hit "Enter" to submit answer!</p>
+                </div></div>`;
+            const form = document.getElementById('math-form');
+            if(form) form.addEventListener('submit', handleMathSubmit);
+            const inp = document.getElementById('math-input');
+            if(inp) inp.focus();
+            return;
+        }
+        if (attackPhase==='RESOLVING') {
+            const topText = mathCorrectCount===12 ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]' : mathCorrectCount===0 ? 'text-red-500' : 'text-white';
+            overlay.innerHTML = `<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center">
+                <div class="bg-slate-900 bg-opacity-95 border-4 border-yellow-500 rounded-2xl p-6 shadow-[0_0_60px_rgba(250,204,21,0.6)] flex flex-col items-center text-center min-w-[220px]">
+                    <h2 class="text-xs font-bold tracking-widest uppercase text-slate-400 mb-2">Power Multiplier</h2>
+                    <div class="text-6xl font-black text-yellow-400 drop-shadow-lg mb-3">${mathCorrectCount} / 12</div>
+                    <span class="text-lg font-black tracking-widest uppercase ${topText}">${diceText}</span>
+                </div></div>`;
+        }
+    };
+
+    const renderLog = () => {
+        let html = '';
+        combatLog.forEach((log,i) => {
+            let cls = log.className || 'text-slate-300';
+            if (log.text.includes('fainted')) cls = 'text-red-400 font-bold';
+            else if (log.text.includes('wins')) cls = 'text-yellow-400 font-bold';
+            html += `<div class="p-1 rounded transition-all duration-300 ${i===0?'bg-slate-800 opacity-100 shadow-md border-l-2 border-slate-400':'bg-transparent opacity-40'} ${cls}">${log.text}</div>`;
+        });
+        const el = document.getElementById('combat-log');
+        if(el) el.innerHTML = html;
+    };
+
+    const renderGameoverUI = () => {
+        document.getElementById('winner-text').innerText = `${winner} is the Champion!`;
+        let conf = '';
+        for(let i=0;i<20;i++) conf += `<div class="w-2 h-8 bg-yellow-400 rounded-full animate-bounce" style="animation-delay:${Math.random()*2}s;animation-duration:${1+Math.random()}s"></div>`;
+        document.getElementById('confetti-container').innerHTML = conf;
+    };
+
+    // ══════════════════════════════════════════════════════
+    // GAME ACTIONS (identical logic to original game)
+    // ══════════════════════════════════════════════════════
+    window.startGame = () => {
+        if (!p1||!p2) return;
+        const bd1 = shuffleArray(p1.fullDeck).slice(0,3);
+        const bd2 = shuffleArray(p2.fullDeck).slice(0,3);
+        const resetHp = d => d.map(c => ({...c, currentHp:c.maxHp}));
+        p1.deck = resetHp(bd1); p1.activeIndex = 0;
+        p2.deck = resetHp(bd2); p2.activeIndex = 0;
+        gameState='BATTLE'; turn=1; winner=null; attackPhase='IDLE'; combatLog=[];
+        addLog(`${p2.name} sends out ${bd2[0].name}!`);
+        addLog(`${p1.name} sends out ${bd1[0].name}!`);
+        addLog(`Battle Start! ${p1.name} vs ${p2.name}!`, 'text-blue-400 font-bold');
+        updateUI();
+    };
+
+    window.handleRollAttack = () => {
+        if (attackPhase!=='IDLE') return;
+        const cur = turn===1 ? p1 : p2;
+        const card = cur.deck[cur.activeIndex];
+        attackPhase='ROLLING_MOVE'; diceText='Selecting Attack…'; updateUI();
+        let rolls=0;
+        rollInterval = setInterval(()=>{
+            diceRoll=Math.floor(Math.random()*6)+1; rolls++;
+            updateUI();
+            if(rolls>15){
+                clearInterval(rollInterval);
+                const fr = Math.floor(Math.random()*6)+1;
+                diceRoll=fr;
+                const isEven=fr%2===0;
+                let ci = isEven?0:1;
+                if(!card.moves[ci]) ci=0;
+                selectedMoveIndex=ci; attackPhase='MOVE_SELECTED';
+                diceText=isEven?'Evens! 1st Attack':'Odds! 2nd Attack';
+                addLog(`🎲 Rolled a ${fr}. Selected ${card.moves[ci].name}!`, 'text-blue-300');
+                updateUI();
+                setTimeout(()=>startMathChallenge(), 1500);
+            }
+        }, 50);
+    };
+
+    const startMathChallenge = () => {
+        const qs=[];
+        for(let i=0;i<12;i++){const a=Math.floor(Math.random()*11)+2;const b=Math.floor(Math.random()*11)+2;qs.push({q:`${a} × ${b}`,a:a*b});}
+        mathQuestions=qs; currentQuestionIndex=0; mathCorrectCount=0; timeLeft=20;
+        attackPhase='MATH_CHALLENGE'; updateUI();
+        timerInterval=setInterval(()=>{
+            timeLeft--;
+            if(timeLeft<=0){clearInterval(timerInterval);finishMathChallenge(mathCorrectCount);}
+            else{
+                const te=document.getElementById('math-timer');
+                if(te){te.innerHTML=`<svg class="w-6 h-6 mr-1"><use href="#icon-timer"></use></svg> ${timeLeft}s`;if(timeLeft<=5)te.className='text-xl font-black flex items-center text-red-500 animate-pulse';}
+            }
+        },1000);
+    };
+
+    const handleMathSubmit = e => {
+        e.preventDefault();
+        const inp=document.getElementById('math-input');
+        const val=inp.value.trim(); if(!val)return;
+        const correct=parseInt(val,10)===mathQuestions[currentQuestionIndex].a;
+        if(correct){mathCorrectCount+=1;}
+        else{
+            mathCorrectCount=Math.max(0,mathCorrectCount-1);
+            inp.classList.add('border-red-500','text-red-400','animate-shake');
+            inp.classList.remove('border-slate-600','focus:border-indigo-400');
+            setTimeout(()=>{inp.classList.remove('border-red-500','text-red-400','animate-shake');inp.classList.add('border-slate-600','focus:border-indigo-400');},400);
+        }
+        const next=currentQuestionIndex+1;
+        if(next>=12){clearInterval(timerInterval);finishMathChallenge(mathCorrectCount);}
+        else{currentQuestionIndex=next;inp.value='';document.getElementById('math-question-text').innerText=mathQuestions[currentQuestionIndex].q;document.getElementById('math-score-text').innerText=`${mathCorrectCount} / 12`;}
+    };
+
+    const finishMathChallenge=score=>{const cur=turn===1?p1:p2;const card=cur.deck[cur.activeIndex];const move=card.moves[selectedMoveIndex];resolveAttack(move,score);};
+
+    const resolveAttack=(move,correct)=>{
+        attackPhase='RESOLVING';
+        const atk=turn===1?p1:p2; const def=turn===1?p2:p1;
+        const atkCard=atk.deck[atk.activeIndex]; const defCard=def.deck[def.activeIndex];
+        let mult=1,txt='Direct Hit!',lc='text-slate-300';
+        if(correct===0){mult=0;txt='CRITICAL MISS!';lc='text-gray-500 font-bold';}
+        else if(correct<=4){mult=0.5;txt='Glancing Blow…';}
+        else if(correct<=9){mult=1;txt='Direct Hit!';}
+        else if(correct<=11){mult=1.5;txt='Heavy Strike!';lc='text-orange-400 font-bold';}
+        else{mult=2;txt='CRITICAL HIT!';lc='text-yellow-400 font-black';}
+        diceText=txt;
+        const dmg=Math.floor(move.damage*mult);
+        addLog(`🧮 ${atkCard.name} got ${correct}/12! ${txt}`,lc);
+        if(mult===0){addLog(`${atkCard.name} missed completely! (0 damage)`);}
+        else{
+            addLog(`${atkCard.name} used ${move.name}! It did ${dmg} damage.`);
+            animatingCard=turn===1?'p2':'p1';
+            setTimeout(()=>{animatingCard=null;updateUI();},500);
+        }
+        defCard.currentHp=Math.max(0,defCard.currentHp-dmg);
+        updateUI();
+        setTimeout(()=>{
+            attackPhase='IDLE'; selectedMoveIndex=null;
+            if(defCard.currentHp===0){
+                addLog(`${defCard.name} fainted!`,'text-red-400 font-bold');
+                const ni=def.deck.findIndex(c=>c.currentHp>0);
+                if(ni!==-1){def.activeIndex=ni;addLog(`${def.name} sends out ${def.deck[ni].name}!`);turn=turn===1?2:1;updateUI();}
+                else{gameState='GAMEOVER';winner=atk.name;addLog(`${def.name} has no more cards! ${atk.name} wins!`,'text-yellow-400 font-bold');updateUI();}
+            } else {turn=turn===1?2:1;updateUI();}
+        },2800);
+    };
+
+    window.resetGame = () => {
+        // Return to setup but keep p1 (logged-in student) loaded
+        p2=null; gameState='SETUP'; combatLog=[]; selectedOpponentStudent=null;
+        showError('');
+        // Reset opponent panel
+        const panel=document.getElementById('p2-panel');
+        panel.className='border-2 border-dashed rounded-xl p-5 text-center transition-colors border-slate-600 hover:border-red-400 bg-slate-800';
+        document.getElementById('p2-content').innerHTML=`<svg class="mx-auto text-slate-500 w-8 h-8 mb-3"><use href="#icon-swords"></use></svg><h3 class="text-base font-bold text-slate-300 mb-1">Choose Your Opponent</h3><p class="text-slate-500 text-xs mb-4">Select a classmate, then they verify with their email</p><div id="opponent-picker" class="space-y-3"><select id="opponent-select" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-400 transition-colors"><option value="">Loading…</option></select><button onclick="selectOpponent()" class="w-full px-4 py-2 bg-red-700 hover:bg-red-600 rounded-lg font-bold text-sm transition-colors">Challenge This Student →</button></div><div id="opponent-verify" class="hidden space-y-3"><div class="bg-slate-700 rounded-lg p-3 text-left"><p class="text-xs text-slate-400 mb-1">Challenging:</p><p class="font-bold text-white" id="opponent-name-display">—</p></div><p class="text-xs text-slate-400">Hand the device to <span id="opponent-name-inline" class="text-white font-bold">them</span> to verify:</p><input id="opponent-email" type="email" placeholder="Their email address…" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-400 transition-colors placeholder-slate-500"><div class="flex gap-2"><button onclick="cancelOpponent()" class="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs transition-colors">← Back</button><button onclick="verifyOpponent()" id="verify-btn" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg font-bold text-xs transition-colors">Verify &amp; Load Cards</button></div></div>`;
+        populateOpponentSelect();
+        updateStartBtn();
+        updateUI();
+    };
+
+    // Initial screen
+    updateUI();
+    </script>
+</body>
+</html>

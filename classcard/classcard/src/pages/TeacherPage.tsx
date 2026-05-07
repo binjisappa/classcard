@@ -210,37 +210,68 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
     : cards;
 
   return (
-    <div className="parchment-page font-body min-h-screen">
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#fce4ec 0%,#f3e5f5 30%,#e8eaf6 60%,#e1f5fe 100%)', fontFamily: "'Nunito','Segoe UI',sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        .tp-page * { font-family: 'Nunito','Segoe UI',sans-serif !important; }
+        .tp-tab { padding:9px 18px; border-radius:14px; border:1.5px solid transparent; font-size:0.78rem; font-weight:800; cursor:pointer; background:transparent; color:#8090b0; letter-spacing:0.04em; transition:all 0.2s; }
+        .tp-tab:hover { background:rgba(255,255,255,0.6); color:#5060a0; }
+        .tp-tab.active { background:rgba(255,255,255,0.85); border-color:rgba(180,160,220,0.35); color:#3040a0; box-shadow:0 4px 16px rgba(160,120,220,0.12); }
+        .tp-panel { background:rgba(255,255,255,0.72); border-radius:20px; padding:20px; border:1.5px solid rgba(255,255,255,0.9); box-shadow:0 4px 24px rgba(180,120,220,0.08); backdrop-filter:blur(8px); }
+        .tp-label { display:block; font-size:0.68rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#8090b0; margin-bottom:6px; }
+        .tp-input { width:100%; padding:10px 14px; border:1.5px solid rgba(180,160,220,0.3); border-radius:12px; font-size:0.88rem; background:rgba(255,255,255,0.8); color:#3040a0; font-family:inherit; outline:none; transition:border-color 0.2s; box-sizing:border-box; }
+        .tp-input:focus { border-color:#a090d0; box-shadow:0 0 0 3px rgba(160,140,210,0.12); }
+        .tp-btn-primary { padding:10px 20px; border-radius:14px; border:none; background:linear-gradient(135deg,#b39ddb,#9575cd); color:#fff; font-weight:800; font-size:0.85rem; cursor:pointer; letter-spacing:0.06em; transition:all 0.2s; box-shadow:0 4px 16px rgba(150,100,200,0.25); font-family:inherit; }
+        .tp-btn-primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 20px rgba(150,100,200,0.35); }
+        .tp-btn-primary:disabled { opacity:0.6; cursor:not-allowed; }
+        .tp-btn-gold { padding:9px 18px; border-radius:12px; border:none; background:linear-gradient(135deg,#ffd54f,#ffb300); color:#5a3a00; font-weight:800; font-size:0.82rem; cursor:pointer; transition:all 0.2s; box-shadow:0 3px 12px rgba(200,150,0,0.25); font-family:inherit; }
+        .tp-btn-gold:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 5px 18px rgba(200,150,0,0.35); }
+        .tp-btn-gold:disabled { opacity:0.6; cursor:not-allowed; }
+        .tp-btn-outline { padding:7px 14px; border-radius:10px; border:1.5px solid rgba(160,140,210,0.35); background:rgba(255,255,255,0.6); color:#6070b0; font-weight:700; font-size:0.78rem; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+        .tp-btn-outline:hover { background:rgba(255,255,255,0.9); border-color:rgba(160,140,210,0.6); }
+        .tp-btn-danger { padding:7px 14px; border-radius:10px; border:1.5px solid rgba(220,80,80,0.3); background:rgba(255,200,200,0.15); color:#c04040; font-weight:700; font-size:0.78rem; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+        .tp-btn-danger:hover { background:rgba(255,180,180,0.3); }
+        .tp-chip { padding:6px 14px; border-radius:20px; border:1.5px solid rgba(180,160,220,0.3); background:rgba(255,255,255,0.6); color:#6070b0; font-size:0.78rem; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+        .tp-chip-active { background:rgba(160,140,220,0.15); border-color:#a090d0; color:#3040a0; }
+        .tp-rarity { border-radius:12px; padding:8px 4px; border:1.5px solid rgba(180,160,220,0.25); background:rgba(255,255,255,0.5); color:#8090b0; font-size:0.72rem; font-weight:800; cursor:pointer; text-align:center; transition:all 0.2s; font-family:inherit; }
+        .tp-rarity-active { border-color:#a090d0; background:rgba(160,140,220,0.12); color:#3040a0; }
+        .tp-table { width:100%; border-collapse:collapse; }
+        .tp-table th { font-size:0.62rem; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:#9090c0; padding:10px 14px; border-bottom:1.5px solid rgba(180,160,220,0.2); text-align:left; }
+        .tp-table td { padding:12px 14px; border-bottom:1px solid rgba(180,160,220,0.1); font-size:0.84rem; color:#4050a0; vertical-align:middle; }
+        .tp-table tr:hover td { background:rgba(255,255,255,0.5); }
+        .tp-section { font-size:0.65rem; font-weight:800; letter-spacing:0.16em; text-transform:uppercase; color:#9090c0; margin-bottom:14px; }
+        .tp-status-working { padding:10px 16px; border-radius:12px; font-size:0.8rem; font-weight:700; margin-top:10px; background:rgba(100,160,255,0.1); border:1px solid rgba(100,160,255,0.3); color:#3060c0; }
+        .tp-status-done { padding:10px 16px; border-radius:12px; font-size:0.8rem; font-weight:700; margin-top:10px; background:rgba(80,200,120,0.1); border:1px solid rgba(80,200,120,0.3); color:#1a6a3a; }
+        .tp-status-error { padding:10px 16px; border-radius:12px; font-size:0.8rem; font-weight:700; margin-top:10px; background:rgba(255,80,80,0.08); border:1px solid rgba(255,80,80,0.25); color:#c03030; }
+        .tp-modal-bg { position:fixed; inset:0; background:rgba(100,80,160,0.25); backdrop-filter:blur(12px); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px; }
+        .tp-modal { background:linear-gradient(145deg,rgba(255,255,255,0.98),rgba(248,244,255,0.98)); border-radius:28px; padding:32px; width:100%; max-width:480px; position:relative; box-shadow:0 24px 64px rgba(120,80,200,0.18); border:1.5px solid rgba(255,255,255,0.9); }
+        .tp-modal-wide { max-width:780px; max-height:90vh; overflow-y:auto; }
+        .tp-modal h3 { font-weight:800; font-size:1.1rem; margin-bottom:20px; color:#3040a0; }
+        .tp-err { background:rgba(255,80,80,0.08); border:1px solid rgba(255,80,80,0.25); color:#c03030; border-radius:10px; padding:8px 14px; font-size:0.78rem; margin-bottom:14px; }
+        .tp-alert-success { background:rgba(80,200,120,0.1); border:1px solid rgba(80,200,120,0.3); color:#1a6a3a; border-radius:12px; padding:10px 16px; font-size:0.82rem; font-weight:700; }
+      `}</style>
+
+      <div className="tp-page">
       {/* Header */}
-      <header
-        className="sticky top-0 z-[100]"
-        style={{ background: 'linear-gradient(180deg, rgba(90,40,10,0.18), rgba(90,40,10,0.08))', borderBottom: '2px solid rgba(90,50,10,0.2)', backdropFilter: 'blur(4px)' }}
-      >
-        <div className="flex items-center justify-between mx-auto" style={{ maxWidth: 1200, padding: '0.9rem 2rem' }}>
-          <span className="logo-gradient--parchment" style={{ fontSize: '1.3rem' }}>✦ ClassCard ✦</span>
-          <div className="flex items-center gap-3">
-            <span className="text-xs px-3 py-1 rounded-[20px]" style={{ background: 'rgba(90,40,10,0.15)', border: '1px solid rgba(90,40,10,0.25)', color: '#5a2e0a' }}>
-              {session.user.email}
-            </span>
-            <span className="text-xs px-3 py-1 rounded-[20px] font-extrabold tracking-widest uppercase" style={{ background: 'rgba(200,160,0,0.2)', color: '#ffe080', border: '1px solid rgba(200,160,0,0.4)' }}>
-              Teacher
-            </span>
-            <button onClick={onSignOut} className="btn-outline" style={{ borderColor: 'rgba(90,40,10,0.35)', color: '#5a2e0a' }}>
-              Sign Out
-            </button>
+      <header style={{ background:'rgba(255,255,255,0.65)', borderBottom:'1.5px solid rgba(255,255,255,0.9)', backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:100, boxShadow:'0 2px 16px rgba(180,120,220,0.08)' }}>
+        <div style={{ maxWidth:1240, margin:'0 auto', padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', height:60 }}>
+          <span style={{ fontSize:'1.1rem', fontWeight:900, background:'linear-gradient(135deg,#ce93d8,#9575cd,#64b5f6)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'0.04em' }}>✦ ClassCard ✦</span>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:'0.72rem', padding:'4px 12px', borderRadius:20, background:'rgba(160,140,220,0.1)', border:'1px solid rgba(160,140,220,0.25)', color:'#6070b0', fontWeight:600 }}>{session.user.email}</span>
+            <span style={{ fontSize:'0.65rem', padding:'4px 10px', borderRadius:20, background:'linear-gradient(135deg,rgba(200,160,255,0.2),rgba(160,200,255,0.2))', border:'1px solid rgba(160,140,220,0.3)', color:'#6060b0', fontWeight:800, letterSpacing:'0.1em', textTransform:'uppercase' }}>Teacher</span>
+            <button onClick={onSignOut} className="tp-btn-outline" style={{ fontSize:'0.72rem', padding:'6px 14px' }}>Sign Out</button>
           </div>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="mx-auto" style={{ maxWidth: 1200, padding: '0 2rem' }}>
-        <div className="tab-bar tab-bar--parchment">
+      {/* Main */}
+      <div style={{ maxWidth:1240, margin:'0 auto', padding:'24px 28px' }}>
+        <div style={{ background:'rgba(255,255,255,0.45)', borderRadius:40, padding:'24px 28px', boxShadow:'0 20px 80px rgba(180,120,220,0.12)', border:'2px solid rgba(255,255,255,0.8)', backdropFilter:'blur(12px)' }}>
+
+        {/* Tab bar */}
+        <div style={{ display:'flex', gap:6, marginBottom:24, flexWrap:'wrap' }}>
           {TABS.map(t => (
-            <button
-              key={t.key}
-              className={`tab-btn tab-btn--parchment ${tab === t.key ? 'active' : ''}`}
-              onClick={() => { setTab(t.key); setFilterStudent(null); }}
-            >
+            <button key={t.key} className={`tp-tab${tab === t.key ? ' active' : ''}`} onClick={() => { setTab(t.key); setFilterStudent(null); }}>
               {t.label}
             </button>
           ))}
@@ -248,30 +279,19 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
         {/* Generate Card Tab */}
         {tab === 'generate' && (
-          <div className="grid gap-6" style={{ gridTemplateColumns: 'minmax(300px, 380px) 1fr' }}>
+          <div style={{ display:'grid', gap:20, gridTemplateColumns:'minmax(300px,380px) 1fr' }}>
             {/* Left Column */}
-            <div>
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               {/* Student Selection */}
-              <div className="p-6 rounded-xs" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)', boxShadow: '2px 3px 12px rgba(0,0,0,0.09), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-                <h3 className="form-label form-label--parchment flex items-center gap-2 mb-4">
-                  <span className="inline-block w-1 h-4 rounded" style={{ background: 'var(--gold)' }} />
-                  Select Student
-                </h3>
-                <div className="flex flex-wrap gap-1.5 mb-3">
+              <div className="tp-panel">
+                <div className="tp-section">Select Student</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                   {students.length === 0 && (
-                    <span className="text-xs italic" style={{ color: '#9a7040' }}>No students yet — add one in the Students tab</span>
+                    <span style={{ fontSize:'0.78rem', color:'#9090c0', fontStyle:'italic' }}>No students yet — add one in the Students tab</span>
                   )}
                   {students.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => { setSelectedStudent(s); setSavedBanner(false); }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[20px] text-xs cursor-pointer transition-all border"
-                      style={{
-                        background: selectedStudent?.id === s.id ? 'rgba(200,160,0,0.12)' : 'rgba(255,248,222,0.5)',
-                        borderColor: selectedStudent?.id === s.id ? '#c8a000' : 'rgba(90,50,10,0.18)',
-                        color: selectedStudent?.id === s.id ? '#8b6a00' : '#7a5a40',
-                      }}
-                    >
+                    <button key={s.id} onClick={() => { setSelectedStudent(s); setSavedBanner(false); }}
+                      className={`tp-chip${selectedStudent?.id === s.id ? ' tp-chip-active' : ''}`}>
                       {s.name}
                     </button>
                   ))}
@@ -279,97 +299,68 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
               </div>
 
               {/* Card Details */}
-              <div className="p-6 rounded-xs mt-5" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)', boxShadow: '2px 3px 12px rgba(0,0,0,0.09), inset 0 1px 0 rgba(255,255,255,0.5)' }}>
-                <h3 className="form-label form-label--parchment flex items-center gap-2 mb-4">
-                  <span className="inline-block w-1 h-4 rounded" style={{ background: 'var(--gold)' }} />
-                  Card Details
-                </h3>
+              <div className="tp-panel">
+                <div className="tp-section">Card Details</div>
 
                 {/* Rarity */}
-                <label className="form-label form-label--parchment">Rarity</label>
-                <div className="grid grid-cols-4 gap-2 mb-4">
+                <label className="tp-label">Rarity</label>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
                   {[
-                    { key: 'common', icon: '⭐', label: 'Common', cls: 'r-common' },
-                    { key: 'silver', icon: '✦', label: 'Silver', cls: 'r-silver' },
-                    { key: 'gold-rare', icon: '★', label: 'Gold', cls: 'r-gold' },
-                    { key: 'prismatic', icon: '✦✦', label: 'Prism', cls: 'r-prismatic' },
+                    { key: 'common', icon: '⭐', label: 'Common' },
+                    { key: 'silver', icon: '✦', label: 'Silver' },
+                    { key: 'gold-rare', icon: '★', label: 'Gold' },
+                    { key: 'prismatic', icon: '✦✦', label: 'Prism' },
                   ].map(r => (
-                    <button
-                      key={r.key}
-                      className={`rarity-btn ${r.cls} ${rarity === r.key ? 'active' : ''}`}
-                      onClick={() => setRarity(r.key)}
-                    >
-                      <span className="r-icon">{r.icon}</span>
-                      <span>{r.label}</span>
+                    <button key={r.key} onClick={() => setRarity(r.key)}
+                      className={`tp-rarity${rarity === r.key ? ' tp-rarity-active' : ''}`}>
+                      <div style={{ fontSize:'1rem', marginBottom:2 }}>{r.icon}</div>
+                      <div>{r.label}</div>
                     </button>
                   ))}
                 </div>
 
-                <div className="mb-4">
-                  <label className="form-label form-label--parchment">What did the student do well?</label>
-                  <textarea
-                    className="form-input form-input--parchment resize-none"
-                    style={{ minHeight: 75 }}
+                <div style={{ marginBottom:14 }}>
+                  <label className="tp-label">What did the student do well?</label>
+                  <textarea className="tp-input" style={{ minHeight:75, resize:'none' }}
                     placeholder="e.g. Solved every maths problem today without giving up, and helped classmates understand fractions."
                     value={achievement}
                     onChange={e => setAchievement(e.target.value)}
                   />
                 </div>
 
-                <div className="mb-4">
-                  <label className="form-label form-label--parchment">
-                    Character Type <span className="text-xs" style={{ color: '#9a7040' }}>(optional)</span>
-                  </label>
-                  <input
-                    type="text" className="form-input form-input--parchment"
+                <div style={{ marginBottom:16 }}>
+                  <label className="tp-label">Character Type <span style={{ color:'#b0b8cc', fontWeight:600, fontSize:'0.72rem' }}>(optional)</span></label>
+                  <input type="text" className="tp-input"
                     placeholder="e.g. fire dragon, ocean wizard, forest fox…"
                     value={characterType}
                     onChange={e => setCharacterType(e.target.value)}
                   />
                 </div>
 
-                <button
-                  onClick={handleGenerate}
-                  disabled={loading}
-                  className="btn-gold w-full"
-                  style={{ fontFamily: "'Cinzel', serif", fontSize: '0.95rem', letterSpacing: '0.08em' }}
-                >
+                <button onClick={handleGenerate} disabled={loading} className="tp-btn-primary" style={{ width:'100%', fontSize:'0.9rem' }}>
                   {loading ? 'Generating…' : '✦ Generate Card ✦'}
                 </button>
 
-                {status && (
-                  <div className={`status-bar ${statusType} mt-3`}>
-                    {status}
-                  </div>
-                )}
+                {status && <div className={`tp-status-${statusType}`}>{status}</div>}
               </div>
             </div>
 
             {/* Right Column - Preview */}
-            <div className="flex flex-col items-center gap-4" style={{ minHeight: 400 }}>
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, minHeight:400 }}>
               {!generatedCard ? (
-                <div
-                  className="flex flex-col items-center justify-center"
-                  style={{ width: 260, height: 375, borderRadius: 18, border: '2px dashed rgba(200,160,0,0.2)' }}
-                >
-                  <span className="text-4xl mb-3" style={{ opacity: 0.25 }}>🃏</span>
-                  <span className="text-sm italic" style={{ color: '#9a7040' }}>Card preview appears here</span>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', width:260, height:375, borderRadius:20, border:'2px dashed rgba(160,140,220,0.25)', background:'rgba(255,255,255,0.35)' }}>
+                  <span style={{ fontSize:'3rem', opacity:0.2, marginBottom:10 }}>🃏</span>
+                  <span style={{ fontSize:'0.82rem', color:'#a0a8c8', fontStyle:'italic' }}>Card preview appears here</span>
                 </div>
               ) : (
                 <>
                   <PokeCard card={generatedCard as Card} showShimmerBtn />
                   {savedBanner ? (
-                    <div className="alert-success w-full text-center">
-                      Card saved to student's collection!
-                    </div>
+                    <div className="tp-alert-success" style={{ textAlign:'center', width:'100%' }}>Card saved to student's collection!</div>
                   ) : (
-                    <div className="flex gap-3 flex-wrap justify-center">
-                      <button onClick={handleGenerate} className="btn-outline btn-sm" style={{ borderColor: 'rgba(200,160,0,0.35)', color: '#c07800' }}>
-                        ↺ Regenerate
-                      </button>
-                      <button onClick={handleSaveCard} className="btn-gold btn-sm">
-                        💾 Save to Student
-                      </button>
+                    <div style={{ display:'flex', gap:10, flexWrap:'wrap', justifyContent:'center' }}>
+                      <button onClick={handleGenerate} className="tp-btn-outline">↺ Regenerate</button>
+                      <button onClick={handleSaveCard} className="tp-btn-gold">💾 Save to Student</button>
                     </div>
                   )}
                 </>
@@ -455,38 +446,26 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
         {tab === 'cards' && (
           <div>
             {filterStudent && (
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-sm" style={{ color: '#7a5a40' }}>
-                  Showing cards for: <strong>{students.find(s => s.id === filterStudent)?.name}</strong>
-                </span>
-                <button onClick={() => setFilterStudent(null)} className="btn-outline btn-sm" style={{ borderColor: 'rgba(90,40,10,0.25)', color: '#7a5a40' }}>
-                  Show All
-                </button>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+                <span style={{ fontSize:'0.84rem', color:'#5060a0' }}>Showing cards for: <strong>{students.find(s => s.id === filterStudent)?.name}</strong></span>
+                <button onClick={() => setFilterStudent(null)} className="tp-btn-outline">Show All</button>
               </div>
             )}
-            <h2 className="font-display font-bold text-xs uppercase tracking-[0.15em] mb-4" style={{ color: '#c8a000' }}>
-              Cards You've Created
-            </h2>
+            <div className="tp-section">Cards You've Created</div>
             {displayCards.length === 0 ? (
-              <div className="text-center py-12">
-                <span className="text-5xl block mb-4" style={{ opacity: 0.25 }}>🃏</span>
-                <span className="text-sm italic" style={{ color: '#9a7040' }}>No cards yet.</span>
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <span style={{ fontSize:'3rem', opacity:0.2, display:'block', marginBottom:12 }}>🃏</span>
+                <span style={{ fontSize:'0.85rem', color:'#a0a8c8', fontStyle:'italic' }}>No cards yet.</span>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-8" style={{ padding: '1rem 0' }}>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:28, padding:'8px 0' }}>
                 {displayCards.map(c => (
-                  <div key={c.id} className="relative">
+                  <div key={c.id} style={{ position:'relative' }}>
                     {c.card_source === 'built' ? <BuiltCard card={c} onClick={() => setDetailCard(c)} /> : <PokeCard card={c} showShimmerBtn onClick={() => setDetailCard(c)} />}
-                    <div className="flex gap-1.5 justify-center mt-2 flex-wrap">
-                      <button onClick={() => setModal({ type: 'editCard', data: c })} className="btn-outline btn-sm" style={{ borderColor: 'rgba(200,160,0,0.35)', color: '#c07800' }}>
-                        ✏ Edit
-                      </button>
-                      <button onClick={() => handleRegenImage(c)} className="btn-outline btn-sm" style={{ borderColor: 'rgba(80,160,255,0.35)', color: '#5a8ab0' }}>
-                        🎨 New Image
-                      </button>
-                      <button onClick={() => setModal({ type: 'deleteCard', data: c })} className="btn-danger btn-sm">
-                        🗑 Delete
-                      </button>
+                    <div style={{ display:'flex', gap:6, justifyContent:'center', marginTop:8, flexWrap:'wrap' }}>
+                      <button onClick={() => setModal({ type: 'editCard', data: c })} className="tp-btn-outline">✏ Edit</button>
+                      <button onClick={() => handleRegenImage(c)} className="tp-btn-outline" style={{ borderColor:'rgba(100,160,255,0.35)', color:'#5070c0' }}>🎨 New Image</button>
+                      <button onClick={() => setModal({ type: 'deleteCard', data: c })} className="tp-btn-danger">🗑 Delete</button>
                     </div>
                   </div>
                 ))}
@@ -498,98 +477,66 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
         {/* Students Tab */}
         {tab === 'students' && (
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-display font-bold text-xs uppercase tracking-[0.15em]" style={{ color: '#c8a000' }}>
-                Your Students
-              </h2>
-              <button onClick={() => setModal({ type: 'addStudent' })} className="btn-gold btn-sm">
-                + Add Student
-              </button>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+              <div className="tp-section" style={{ marginBottom:0 }}>Your Students</div>
+              <button onClick={() => setModal({ type: 'addStudent' })} className="tp-btn-primary" style={{ fontSize:'0.8rem' }}>+ Add Student</button>
             </div>
             {students.length === 0 ? (
-              <div className="text-center py-8">
-                <span className="text-sm italic" style={{ color: '#9a7040' }}>No students yet.</span>
-              </div>
+              <div style={{ textAlign:'center', padding:'48px 20px', color:'#a0a8c8', fontStyle:'italic', fontSize:'0.85rem' }}>No students yet.</div>
             ) : (
-              <table className="data-table data-table--parchment">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Login Email</th>
-                    <th>Cards</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
+              <div className="tp-panel" style={{ padding:0, overflow:'hidden' }}>
+              <table className="tp-table">
+                <thead><tr><th>Name</th><th>Login Email</th><th>Cards</th><th>Actions</th></tr></thead>
                 <tbody>
                   {students.map(s => (
                     <tr key={s.id}>
-                      <td className="font-semibold">{s.name}</td>
-                      <td className="text-xs" style={{ color: '#9a7040' }}>{s.login_email || '—'}</td>
+                      <td style={{ fontWeight:700 }}>{s.name}</td>
+                      <td style={{ fontSize:'0.78rem', color:'#8090b0' }}>{s.login_email || '—'}</td>
                       <td>{cards.filter(c => c.student_id === s.id).length}</td>
                       <td>
-                        <div className="flex gap-1.5 flex-wrap">
-                          <button onClick={() => { setFilterStudent(s.id); setTab('cards'); }} className="btn-outline btn-sm" style={{ borderColor: 'rgba(90,40,10,0.25)', color: '#5a3a20' }}>
-                            View
-                          </button>
-                          <button onClick={() => setModal({ type: 'email', data: s })} className="btn-outline btn-sm" style={{ borderColor: 'rgba(80,160,255,0.35)', color: '#5a8ab0' }}>
-                            📧
-                          </button>
-                          <button onClick={() => setModal({ type: 'editStudent', data: s })} className="btn-outline btn-sm" style={{ borderColor: 'rgba(200,160,0,0.35)', color: '#c07800' }}>
-                            ✏ Edit
-                          </button>
-                          <button onClick={() => { setModalError(''); setModal({ type: 'resetPassword', data: s }); }} className="btn-outline btn-sm" style={{ borderColor: 'rgba(80,200,120,0.35)', color: '#2a8a50' }}>
-                            🔑 Reset PW
-                          </button>
-                          <button onClick={() => setModal({ type: 'deleteStudent', data: s })} className="btn-danger btn-sm">
-                            🗑
-                          </button>
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                          <button onClick={() => { setFilterStudent(s.id); setTab('cards'); }} className="tp-btn-outline">View</button>
+                          <button onClick={() => setModal({ type: 'email', data: s })} className="tp-btn-outline">📧</button>
+                          <button onClick={() => setModal({ type: 'editStudent', data: s })} className="tp-btn-outline">✏ Edit</button>
+                          <button onClick={() => { setModalError(''); setModal({ type: 'resetPassword', data: s }); }} className="tp-btn-outline" style={{ borderColor:'rgba(80,200,120,0.35)', color:'#2a7a50' }}>🔑 Reset PIN</button>
+                          <button onClick={() => setModal({ type: 'deleteStudent', data: s })} className="tp-btn-danger">🗑</button>
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )}
 
         {/* Settings Tab */}
         {tab === 'settings' && (
-          <div className="max-w-[480px]">
-            <h2 className="font-display font-bold text-xs uppercase tracking-[0.15em] mb-4" style={{ color: '#c8a000' }}>
-              AI Settings
-            </h2>
-            <div className="mb-4">
-              <label className="form-label form-label--parchment">Gemini API Key</label>
-              <input
-                type="password" className="form-input form-input--parchment"
-                placeholder="AIza…" value={geminiKey}
-                onChange={e => setGeminiKey(e.target.value)}
-              />
-              <p className="text-xs mt-1" style={{ color: '#9a7040' }}>
-                One key for text generation. Free at <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" className="underline" style={{ color: '#c07800' }}>aistudio.google.com ↗</a>
-              </p>
+          <div style={{ maxWidth:500 }}>
+            <div className="tp-section">AI Settings</div>
+            <div className="tp-panel" style={{ marginBottom:16 }}>
+              <div style={{ marginBottom:14 }}>
+                <label className="tp-label">Gemini API Key</label>
+                <input type="password" className="tp-input" placeholder="AIza…" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} />
+                <p style={{ fontSize:'0.72rem', color:'#a0a8c8', marginTop:6 }}>Free at <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style={{ color:'#9090d0', textDecoration:'underline' }}>aistudio.google.com ↗</a></p>
+              </div>
+              <button onClick={handleSaveKey} className="tp-btn-primary">Save Key</button>
             </div>
-            <button onClick={handleSaveKey} className="btn-gold mb-6">Save Key</button>
-
-            <div className="my-6" style={{ borderTop: '1px solid rgba(90,50,10,0.15)' }} />
-
-            <h2 className="font-display font-bold text-xs uppercase tracking-[0.15em] mb-4" style={{ color: '#c8a000' }}>
-              Email Settings (EmailJS)
-            </h2>
-            <div className="mb-4">
-              <label className="form-label form-label--parchment">EmailJS Public Key</label>
-              <input type="password" className="form-input form-input--parchment" placeholder="public_key" value={emailKey} onChange={e => setEmailKey(e.target.value)} />
+            <div className="tp-section" style={{ marginTop:24 }}>Email Settings (EmailJS)</div>
+            <div className="tp-panel">
+              {[
+                { label:'EmailJS Public Key', val:emailKey, set:setEmailKey, ph:'public_key', type:'password' },
+                { label:'EmailJS Service ID', val:emailService, set:setEmailService, ph:'service_xxx', type:'text' },
+                { label:'EmailJS Template ID', val:emailTemplate, set:setEmailTemplate, ph:'template_xxx', type:'text' },
+              ].map(f => (
+                <div key={f.label} style={{ marginBottom:14 }}>
+                  <label className="tp-label">{f.label}</label>
+                  <input type={f.type} className="tp-input" placeholder={f.ph} value={f.val} onChange={e => f.set(e.target.value)} />
+                </div>
+              ))}
+              <button onClick={handleSaveEmail} className="tp-btn-primary">Save Email Settings</button>
             </div>
-            <div className="mb-4">
-              <label className="form-label form-label--parchment">EmailJS Service ID</label>
-              <input type="text" className="form-input form-input--parchment" placeholder="service_xxx" value={emailService} onChange={e => setEmailService(e.target.value)} />
-            </div>
-            <div className="mb-4">
-              <label className="form-label form-label--parchment">EmailJS Template ID</label>
-              <input type="text" className="form-input form-input--parchment" placeholder="template_xxx" value={emailTemplate} onChange={e => setEmailTemplate(e.target.value)} />
-            </div>
-            <button onClick={handleSaveEmail} className="btn-gold">Save Email Settings</button>
           </div>
         )}
       </div>
@@ -599,27 +546,17 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
       {/* Card Detail Modal */}
       {detailCard && (
-        <div className="modal-backdrop visible" onClick={() => setDetailCard(null)}>
-          <div className="modal-card modal-card--parchment modal-card--wide" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setDetailCard(null)} className="absolute top-4 right-4 text-xl cursor-pointer" style={{ color: '#8a5520', background: 'none', border: 'none' }}>
-              ✕
-            </button>
-            <div className="flex gap-6 items-start flex-col md:flex-row">
-              <div className="flex-shrink-0 self-center md:self-start">
+        <div className="tp-modal-bg" onClick={() => setDetailCard(null)}>
+          <div className="tp-modal tp-modal-wide" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setDetailCard(null)} style={{ position:'absolute', top:16, right:16, width:32, height:32, borderRadius:'50%', background:'rgba(160,140,220,0.12)', border:'none', fontSize:'1rem', cursor:'pointer', color:'#8080c0' }}>✕</button>
+            <div style={{ display:'flex', gap:28, alignItems:'flex-start', flexWrap:'wrap' }}>
+              <div style={{ flexShrink:0 }}>
                 {detailCard.card_source === 'built' ? <BuiltCard card={detailCard} /> : <PokeCard card={detailCard} />}
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-display font-black text-2xl mb-1" style={{ color: '#3d2b1f' }}>{detailCard.card_name}</h2>
-                <span
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[12px] text-xs font-bold mb-4"
-                  style={getRarityBadgeStyle(detailCard.rarity)}
-                >
-                  {RARITY_ICONS[detailCard.rarity]} {detailCard.rarity.toUpperCase()}
-                </span>
-
-                <p className="font-handwritten text-lg italic mb-4" style={{ color: '#7a5a40' }}>
-                  "{detailCard.description}"
-                </p>
+              <div style={{ flex:1, minWidth:200 }}>
+                <h2 style={{ fontSize:'1.4rem', fontWeight:900, color:'#3040a0', marginBottom:4 }}>{detailCard.card_name}</h2>
+                <div style={{ display:'inline-block', padding:'3px 12px', borderRadius:20, background:'rgba(100,120,220,0.08)', border:'1px solid rgba(100,120,220,0.2)', fontSize:'0.65rem', fontWeight:700, color:'#6070c0', marginBottom:16, textTransform:'uppercase', letterSpacing:'0.1em' }}>{detailCard.rarity}</div>
+                <p style={{ fontSize:'0.88rem', color:'#7080b0', fontStyle:'italic', marginBottom:20, lineHeight:1.5 }}>"{detailCard.description}"</p>
 
                 <div className="space-y-0">
                   {[
@@ -632,20 +569,21 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                     { label: detailCard.move2_name, value: `${detailCard.move2_dmg} dmg` },
                     { label: 'Awarded', value: new Date(detailCard.created_at).toLocaleDateString() },
                   ].map((row, i) => (
-                    <div key={i} className="flex justify-between py-2" style={{ borderBottom: '1px solid rgba(90,50,10,0.1)' }}>
-                      <span className="text-xs uppercase tracking-wider font-semibold" style={{ color: '#9a7040' }}>{row.label}</span>
-                      <span className="text-sm font-bold" style={{ color: '#3d2b1f' }}>{row.value}</span>
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid rgba(100,120,220,0.08)' }}>
+                      <span style={{ fontSize:'0.72rem', color:'#9090c0', textTransform:'uppercase', letterSpacing:'0.08em' }}>{row.label}</span>
+                      <span style={{ fontSize:'0.82rem', fontWeight:700, color:'#3040a0' }}>{row.value}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-sm mt-4 italic" style={{ color: '#7a5a40' }}>
-                  Awarded to: {detailCard.students?.name || 'Unknown'}
-                </p>
+                <p style={{ fontSize:'0.8rem', marginTop:14, color:'#8090b0', fontStyle:'italic' }}>Awarded to: {detailCard.students?.name || 'Unknown'}</p>
               </div>
             </div>
           </div>
         </div>
       )}
+        </div>{/* end inner container */}
+        </div>{/* end main padding */}
+      </div>{/* end tp-page */}
     </div>
   );
 
@@ -724,8 +662,8 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
             <p className="text-sm mb-2" style={{ color: '#3d2b1f' }}>Delete <strong>{modal.data.name}</strong>?</p>
             <p className="text-sm mb-4" style={{ color: '#c82020' }}>This will also delete all their cards and cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={async () => { await Dashboard.deleteStudent(modal.data.id); loadData(); setModal(null); }} className="btn-danger">Yes, Delete Everything</button>
-              <button onClick={() => setModal(null)} className="btn-outline" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#5a3a20' }}>Cancel</button>
+              <button onClick={async () => { await Dashboard.deleteStudent(modal.data.id); loadData(); setModal(null); }} className="tp-btn-danger">Yes, Delete Everything</button>
+              <button onClick={() => setModal(null)} className="tp-btn-outline">Cancel</button>
             </div>
           </ModalWrapper>
         );
@@ -790,8 +728,8 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
             <p className="text-sm mb-2" style={{ color: '#3d2b1f' }}>Delete <strong>{modal.data.card_name}</strong>?</p>
             <p className="text-sm mb-4" style={{ color: '#c82020' }}>This cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={async () => { await Dashboard.deleteCard(modal.data.id); loadData(); setModal(null); }} className="btn-danger">Yes, Delete Card</button>
-              <button onClick={() => setModal(null)} className="btn-outline" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#5a3a20' }}>Cancel</button>
+              <button onClick={async () => { await Dashboard.deleteCard(modal.data.id); loadData(); setModal(null); }} className="tp-btn-danger">Yes, Delete Card</button>
+              <button onClick={() => setModal(null)} className="tp-btn-outline">Cancel</button>
             </div>
           </ModalWrapper>
         );
@@ -809,16 +747,16 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
               Must be exactly 6 digits. Cannot be 6 of the same number (e.g. 111111).
             </p>
             <div className="mb-3">
-              <label className="form-label form-label--parchment">New 6-Digit PIN</label>
-              <input type="password" inputMode="numeric" maxLength={6} className="form-input form-input--parchment" placeholder="e.g. 482951" value={pw} onChange={e => setPw(e.target.value.replace(/\D/g, '').slice(0, 6))} />
+              <label className="tp-label">New 6-Digit PIN</label>
+              <input type="password" inputMode="numeric" maxLength={6} className="tp-input" placeholder="e.g. 482951" value={pw} onChange={e => setPw(e.target.value.replace(/\D/g, '').slice(0, 6))} />
             </div>
             <div className="mb-3">
-              <label className="form-label form-label--parchment">Confirm PIN</label>
-              <input type="password" inputMode="numeric" maxLength={6} className="form-input form-input--parchment" placeholder="Repeat PIN" value={pw2} onChange={e => setPw2(e.target.value.replace(/\D/g, '').slice(0, 6))} />
+              <label className="tp-label">Confirm PIN</label>
+              <input type="password" inputMode="numeric" maxLength={6} className="tp-input" placeholder="Repeat PIN" value={pw2} onChange={e => setPw2(e.target.value.replace(/\D/g, '').slice(0, 6))} />
             </div>
             {modalError && <p className="text-sm mt-2" style={{ color: '#c82020' }}>{modalError}</p>}
             <div className="flex gap-3 mt-4">
-              <button className="btn-gold" onClick={async () => {
+              <button className="tp-btn-gold" onClick={async () => {
                 if (!/^\d{6}$/.test(pw)) { setModalError('PIN must be exactly 6 digits.'); return; }
                 if (/^(\d)\1{5}$/.test(pw)) { setModalError('PIN cannot be 6 of the same digit (e.g. 111111).'); return; }
                 if (pw !== pw2) { setModalError('PINs do not match.'); return; }
@@ -834,7 +772,7 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                   setModal(null);
                 } catch (err: any) { setModalError(err.message); }
               }}>Set PIN</button>
-              <button onClick={() => setModal(null)} className="btn-outline" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#5a3a20' }}>Cancel</button>
+              <button onClick={() => setModal(null)} className="tp-btn-outline">Cancel</button>
             </div>
           </ModalWrapper>
         );
@@ -859,10 +797,10 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
 function ModalWrapper({ title, children, onClose, danger }: { title: string; children: React.ReactNode; onClose: () => void; danger?: boolean }) {
   return (
-    <div className="modal-backdrop visible" onClick={onClose}>
-      <div className="modal-card modal-card--parchment" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-xl cursor-pointer" style={{ color: '#8a5520', background: 'none', border: 'none' }}>✕</button>
-        <h3 className="font-display font-bold text-lg mb-4" style={{ color: danger ? '#c82020' : '#3d2b1f' }}>{title}</h3>
+    <div className="tp-modal-bg" onClick={onClose}>
+      <div className="tp-modal" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} style={{ position:'absolute', top:16, right:16, width:32, height:32, borderRadius:'50%', background:'rgba(160,140,220,0.1)', border:'none', fontSize:'1rem', cursor:'pointer', color:'#8080c0' }}>✕</button>
+        <h3 style={{ fontWeight:800, fontSize:'1.1rem', marginBottom:20, color: danger ? '#c03030' : '#3040a0' }}>{title}</h3>
         {children}
       </div>
     </div>
@@ -894,18 +832,18 @@ function ModalForm({ fields, onSubmit, submitLabel, error, onCancel }: {
     <form onSubmit={handleSubmit}>
       {fields.map(f => (
         <div key={f.name} className="mb-3">
-          <label className="form-label form-label--parchment">{f.label} {f.optional && <span className="text-xs" style={{ color: '#9a7040' }}>(optional)</span>}</label>
+          <label className="tp-label">{f.label} {f.optional && <span className="text-xs" style={{ color: '#9a7040' }}>(optional)</span>}</label>
           {f.type === 'textarea' ? (
-            <textarea className="form-input form-input--parchment resize-none" rows={2} placeholder={f.placeholder} value={vals[f.name] || ''} onChange={e => setVals(p => ({ ...p, [f.name]: e.target.value }))} />
+            <textarea className="tp-input" style={{ resize:'none' }} rows={2} placeholder={f.placeholder} value={vals[f.name] || ''} onChange={e => setVals(p => ({ ...p, [f.name]: e.target.value }))} />
           ) : (
-            <input type={f.type} className="form-input form-input--parchment" placeholder={f.placeholder} value={vals[f.name] || ''} readOnly={f.readonly} onChange={e => setVals(p => ({ ...p, [f.name]: e.target.value }))} />
+            <input type={f.type} className="tp-input" placeholder={f.placeholder} value={vals[f.name] || ''} readOnly={f.readonly} onChange={e => setVals(p => ({ ...p, [f.name]: e.target.value }))} />
           )}
         </div>
       ))}
-      {error && <div className="alert-error mb-3 text-xs">{error}</div>}
-      <div className="flex gap-3">
-        <button type="submit" disabled={submitting} className="btn-gold">{submitting ? 'Saving…' : submitLabel}</button>
-        <button type="button" onClick={onCancel} className="btn-outline" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#5a3a20' }}>Cancel</button>
+      {error && <div className="tp-err">{error}</div>}
+      <div style={{ display:'flex', gap:10 }}>
+        <button type="submit" disabled={submitting} className="tp-btn-primary">{submitting ? 'Saving…' : submitLabel}</button>
+        <button type="button" onClick={onCancel} className="tp-btn-outline">Cancel</button>
       </div>
     </form>
   );
@@ -1202,8 +1140,8 @@ function BuildCardTab({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
         {/* Student picker */}
-        <div className="p-4 rounded-xs" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)' }}>
-          <p className="form-label form-label--parchment mb-3" style={{ fontSize: '0.68rem' }}>1 · Choose Student</p>
+        <div className="p-4 rounded-xs" style={{ background:'rgba(255,255,255,0.72)', border:'1.5px solid rgba(255,255,255,0.9)', borderRadius:20 }}>
+          <p className="tp-label">1 · Choose Student</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: 220, overflowY: 'auto' }}>
             {students.length === 0 && <span className="text-xs italic" style={{ color: '#9a7040' }}>No students yet</span>}
             {students.map((s: any) => (
@@ -1222,8 +1160,8 @@ function BuildCardTab({
         </div>
 
         {/* Image upload + crop */}
-        <div className="p-4 rounded-xs" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)' }}>
-          <p className="form-label form-label--parchment mb-2" style={{ fontSize: '0.68rem' }}>2 · Upload & Crop Image</p>
+        <div className="p-4 rounded-xs" style={{ background:'rgba(255,255,255,0.72)', border:'1.5px solid rgba(255,255,255,0.9)', borderRadius:20 }}>
+          <p className="tp-label">2 · Upload & Crop Image</p>
 
           {/* Upload preview — full image visible, zoom only, no cropping here */}
           <div
@@ -1302,17 +1240,17 @@ function BuildCardTab({
       </div>
 
       {/* ── Column 2: Card Details ── */}
-      <div className="p-5 rounded-xs" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)' }}>
-        <p className="form-label form-label--parchment mb-4" style={{ fontSize: '0.68rem' }}>3 · Card Details</p>
+      <div className="p-5 rounded-xs" style={{ background:'rgba(255,255,255,0.72)', border:'1.5px solid rgba(255,255,255,0.9)', borderRadius:20 }}>
+        <p className="tp-label">3 · Card Details</p>
 
         <div className="mb-4">
-          <label className="form-label form-label--parchment">Card Name</label>
-          <input type="text" className="form-input form-input--parchment" placeholder="e.g. Zorg the Space Monster"
+          <label className="tp-label">Card Name</label>
+          <input type="text" className="tp-input" placeholder="e.g. Zorg the Space Monster"
             value={buildCard.name} onChange={e => setBuildCard((p: any) => ({ ...p, name: e.target.value }))} />
         </div>
 
         <div className="mb-4">
-          <label className="form-label form-label--parchment">Rarity</label>
+          <label className="tp-label">Rarity</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.4rem' }}>
             {RARITY_OPTIONS.map(r => (
               <button key={r.id} onClick={() => setBuildCard((p: any) => ({ ...p, rarity: r.id }))} style={{
@@ -1331,7 +1269,7 @@ function BuildCardTab({
         </div>
 
         <div className="mb-4">
-          <label className="form-label form-label--parchment">Element Type</label>
+          <label className="tp-label">Element Type</label>
           <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
             {TYPE_OPTIONS.map(t => (
               <button key={t.id} onClick={() => setBuildCard((p: any) => ({ ...p, type: t.id }))} style={{
@@ -1345,15 +1283,15 @@ function BuildCardTab({
         </div>
 
         <div className="mb-4">
-          <label className="form-label form-label--parchment">Description <span style={{ fontSize: '0.7rem', color: '#9a7040' }}>(optional)</span></label>
-          <textarea className="form-input form-input--parchment resize-none" rows={3}
+          <label className="tp-label">Description <span style={{ fontSize: '0.7rem', color: '#9a7040' }}>(optional)</span></label>
+          <textarea className="tp-input" rows={3}
             placeholder="A quirky creature from the realm of imagination..."
             value={buildCard.description}
             onChange={e => setBuildCard((p: any) => ({ ...p, description: e.target.value }))} />
         </div>
 
         <div>
-          <label className="form-label form-label--parchment">Stats</label>
+          <label className="tp-label">Stats</label>
           {([['attack','Attack','⚔️','#ff9999'], ['defense','Defense','🛡️','#99ccff'], ['speed','Speed','💨','#99ffcc']] as const).map(([key, label, icon, color]) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
               <span style={{ width: 22, fontSize: '1rem' }}>{icon}</span>
@@ -1369,7 +1307,7 @@ function BuildCardTab({
 
       {/* ── Column 3: Live Preview + Save ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <p className="form-label form-label--parchment" style={{ fontSize: '0.68rem' }}>4 · Preview & Save</p>
+        <p className="tp-label" style={{ fontSize: '0.68rem' }}>4 · Preview & Save</p>
 
         <BuildCardCard
           buildCard={buildCard}
@@ -1395,7 +1333,7 @@ function BuildCardTab({
             ✓ Card saved to <strong>{buildStudent?.name}</strong>'s collection!
           </div>
         ) : (
-          <button onClick={handleSave} disabled={buildSaving} className="btn-gold w-full"
+          <button onClick={handleSave} disabled={buildSaving} className="tp-btn-primary" style={{ width:'100%' }}
             style={{ fontFamily: "'Cinzel',serif", fontSize: '0.9rem', opacity: buildSaving ? 0.7 : 1 }}>
             {buildSaving ? 'Saving…' : '💾 Save to Student'}
           </button>
@@ -1404,7 +1342,7 @@ function BuildCardTab({
         {buildSaved && (
           <button
             onClick={() => { setBuildSaved(false); setBuildCard({ name: '', rarity: 'common', type: 'fire', description: '', attack: 75, defense: 60, speed: 50 }); setBuildImage(null); setBuildCroppedImage(null); setBuildStudent(null); resetImage(); }}
-            className="btn-outline w-full btn-sm"
+            className="tp-btn-outline" style={{ width:'100%' }}
             style={{ borderColor: 'rgba(90,40,10,0.25)', color: '#7a5a40' }}>
             ＋ Build Another Card
           </button>
@@ -1637,10 +1575,10 @@ function WeeklyProjectTab({
                   style={{ padding: '5px 14px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', border: 'none', borderLeft: '1px solid rgba(90,50,10,0.2)', background: weeklyView === 'submissions' ? 'rgba(200,160,0,0.15)' : 'transparent', color: weeklyView === 'submissions' ? '#8b6a00' : '#9a7040' }}
                 >📥 Submissions {submissions.length > 0 && <span style={{ background: '#c8a000', color: 'white', borderRadius: '50%', padding: '1px 5px', fontSize: '0.62rem', marginLeft: 4 }}>{submissions.length}</span>}</button>
               </div>
-              <button onClick={handleOpenAward} className="btn-gold btn-sm" style={{ fontFamily: "'Cinzel',serif" }}>
+              <button onClick={handleOpenAward} className="tp-btn-gold" style={{ fontFamily: "'Cinzel',serif" }}>
                 🏅 Award Students
               </button>
-              <button onClick={handleNewProject} className="btn-outline btn-sm" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#7a5a40' }}>
+              <button onClick={handleNewProject} className="tp-btn-outline" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#7a5a40' }}>
                 + New Project
               </button>
             </>
@@ -1655,7 +1593,7 @@ function WeeklyProjectTab({
             <h3 className="text-sm font-bold" style={{ color: '#5a3a20' }}>
               Student Submissions — {weeklyTitle}
             </h3>
-            <button onClick={() => loadSubmissions(weeklyProject.id)} className="btn-outline btn-sm" style={{ borderColor: 'rgba(90,40,10,0.2)', color: '#9a7040' }}>
+            <button onClick={() => loadSubmissions(weeklyProject.id)} className="tp-btn-outline" style={{ borderColor: 'rgba(90,40,10,0.2)', color: '#9a7040' }}>
               ↻ Refresh
             </button>
           </div>
@@ -1728,7 +1666,7 @@ function WeeklyProjectTab({
               ))}
             </div>
           )}
-          {weeklyStatus && <div className={`status-bar ${weeklyStatusType} mt-4`}>{weeklyStatus}</div>}
+          {weeklyStatus && <div className={`tp-status-${weeklyStatusType} mt-4`}>{weeklyStatus}</div>}
         </div>
       )}
 
@@ -1740,35 +1678,35 @@ function WeeklyProjectTab({
           <div className="p-6 rounded-xs" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)', boxShadow: '2px 3px 12px rgba(0,0,0,0.09)' }}>
 
             <div className="mb-4">
-              <label className="form-label form-label--parchment">Project Title</label>
-              <input type="text" className="form-input form-input--parchment"
+              <label className="tp-label">Project Title</label>
+              <input type="text" className="tp-input"
                 placeholder="e.g. The Solar System Explorer"
                 value={weeklyTitle} onChange={e => setWeeklyTitle(e.target.value)} />
             </div>
 
             <div className="mb-4">
-              <label className="form-label form-label--parchment">What must students do to earn this card?</label>
-              <textarea className="form-input form-input--parchment resize-none" style={{ minHeight: 90 }}
+              <label className="tp-label">What must students do to earn this card?</label>
+              <textarea className="tp-input" style={{ minHeight: 90 }}
                 placeholder="e.g. Create a poster showing the 8 planets in our solar system..."
                 value={weeklyTask} onChange={e => setWeeklyTask(e.target.value)} />
               <p className="text-xs mt-1 italic" style={{ color: '#9a7040' }}>This text appears as the task on the student's page.</p>
             </div>
 
             <div className="mb-4">
-              <label className="form-label form-label--parchment">
+              <label className="tp-label">
                 Card Character Style <span className="text-xs" style={{ color: '#9a7040' }}>(optional)</span>
               </label>
-              <input type="text" className="form-input form-input--parchment"
+              <input type="text" className="tp-input"
                 placeholder="e.g. space explorer robot, planet dragon, cosmic owl…"
                 value={weeklyCharHint} onChange={e => setWeeklyCharHint(e.target.value)} />
             </div>
 
             {/* End date */}
             <div className="mb-5">
-              <label className="form-label form-label--parchment">
+              <label className="tp-label">
                 Due Date <span className="text-xs" style={{ color: '#9a7040' }}>(optional — shown to students)</span>
               </label>
-              <input type="date" className="form-input form-input--parchment"
+              <input type="date" className="tp-input"
                 value={weeklyEndDate} onChange={e => setWeeklyEndDate(e.target.value)}
                 min={new Date().toISOString().slice(0, 10)}
               />
@@ -1779,8 +1717,7 @@ function WeeklyProjectTab({
               )}
             </div>
 
-            <button onClick={handleGenerate} disabled={weeklyGenerating} className="btn-gold w-full mb-3"
-              style={{ fontFamily: "'Cinzel',serif", fontSize: '0.95rem', letterSpacing: '0.08em' }}>
+            <button onClick={handleGenerate} disabled={weeklyGenerating} className="tp-btn-primary" style={{ width:'100%', marginBottom:10 }}>
               {weeklyGenerating ? 'Generating…' : '✦ Generate Card ✦'}
             </button>
 
@@ -1791,7 +1728,7 @@ function WeeklyProjectTab({
               </button>
             )}
 
-            {weeklyStatus && <div className={`status-bar ${weeklyStatusType} mt-3`}>{weeklyStatus}</div>}
+            {weeklyStatus && <div className={`tp-status-${weeklyStatusType} mt-3`}>{weeklyStatus}</div>}
           </div>
 
           {/* Right: preview */}
@@ -1801,7 +1738,7 @@ function WeeklyProjectTab({
                 <div className="flex justify-center">
                   <PokeCard card={weeklyCard as Card} showShimmerBtn />
                 </div>
-                <div className="p-5 rounded-xs" style={{ background: 'rgba(255,248,222,0.65)', border: '1px solid rgba(90,50,10,0.18)' }}>
+                <div className="p-5 rounded-xs" style={{ background:'rgba(255,255,255,0.72)', border:'1.5px solid rgba(255,255,255,0.9)', borderRadius:20 }}>
                   <div className="text-xs uppercase tracking-widest mb-2" style={{ color: '#c8a000', fontFamily: "'Cinzel',serif" }}>📋 Student View Preview</div>
                   <h3 className="font-display font-black text-base mb-2" style={{ color: '#3d2b1f' }}>{weeklyTitle || 'Project Title'}</h3>
                   {weeklyEndDate && <p className="text-xs font-bold mb-2" style={{ color: '#c07800' }}>📅 Due: {new Date(weeklyEndDate).toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
@@ -1821,12 +1758,12 @@ function WeeklyProjectTab({
 
       {/* ══ Bulk Award Modal ═══════════════════════════════════════════ */}
       {awardModal && (
-        <div className="modal-backdrop visible" onClick={() => { if (!awarding) setAwardModal(false); }}>
+        <div className="tp-modal-bg" onClick={() => { if (!awarding) setAwardModal(false); }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fffbf0', border: '2px solid rgba(90,50,10,0.25)', borderRadius: 20, padding: '2rem', width: '95%', maxWidth: 780, maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
             <button onClick={() => setAwardModal(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#8a5520' }}>✕</button>
             <h3 className="font-display font-black text-xl mb-1" style={{ color: '#3d2b1f' }}>🏅 Award "{weeklyTitle}"</h3>
             <p className="text-xs mb-5 italic" style={{ color: '#9a7040' }}>Tick each student in the column matching their achievement level. Each student can only receive one rarity.</p>
-            {awardError && <div className="alert-error mb-4 text-sm">{awardError}</div>}
+            {awardError && <div className="tp-err mb-4 text-sm">{awardError}</div>}
             <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               {([
                 { key: 'common', label: 'Common', icon: '⭐', desc: 'Completed the task', color: '#8b6a00', bg: 'rgba(200,160,0,0.07)', border: 'rgba(200,160,0,0.3)' },
@@ -1865,8 +1802,8 @@ function WeeklyProjectTab({
                     : <span className="italic" style={{ color: '#9a7040' }}>No students selected yet</span>}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setAwardModal(false)} className="btn-outline btn-sm" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#7a5a40' }}>Cancel</button>
-                  <button onClick={handleAward} disabled={awarding || awardCount === 0} className="btn-gold" style={{ opacity: awardCount === 0 ? 0.4 : 1, fontFamily: "'Cinzel',serif" }}>
+                  <button onClick={() => setAwardModal(false)} className="tp-btn-outline" style={{ borderColor: 'rgba(90,40,10,0.3)', color: '#7a5a40' }}>Cancel</button>
+                  <button onClick={handleAward} disabled={awarding || awardCount === 0} className="tp-btn-gold" style={{ opacity: awardCount === 0 ? 0.4 : 1, fontFamily: "'Cinzel',serif" }}>
                     {awarding ? 'Awarding…' : `🏅 Award ${awardCount > 0 ? awardCount + ' Student' + (awardCount !== 1 ? 's' : '') : ''}`}
                   </button>
                 </div>

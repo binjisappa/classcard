@@ -612,7 +612,7 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                   }
                   let newStudent;
                   try {
-                    newStudent = await Dashboard.createStudent(vals.name, session.user.id, newUser.id);
+                    newStudent = await Dashboard.createStudent(vals.name, session.user.id, newUser.id, vals.email);
                   } catch (e: any) {
                     throw new Error('Database error saving new student: ' + e.message);
                   }

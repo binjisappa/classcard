@@ -4,9 +4,9 @@ import type { Student, Card } from './supabase';
 
 export const Dashboard = {
   // Students
-  async createStudent(name: string, teacherId: string, authUserId?: string): Promise<Student> {
+  async createStudent(name: string, teacherId: string, authUserId?: string, loginEmail?: string): Promise<Student> {
     const { data, error } = await sb.from('students')
-      .insert({ name, teacher_id: teacherId, auth_user_id: authUserId ?? null })
+      .insert({ name, teacher_id: teacherId, auth_user_id: authUserId ?? null, login_email: loginEmail ?? null })
       .select().single();
     if (error) throw error;
     // Link the profile back to this student row.

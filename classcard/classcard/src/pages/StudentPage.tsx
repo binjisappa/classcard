@@ -37,16 +37,58 @@ function rarityCardStyle(rarity: string): React.CSSProperties {
   }
 }
 
-/* 4 colour themes — click knob to cycle through them */
-const COLOR_THEMES = [
-  { light: '#e3f2fd', mid: '#90caf9', dark: '#42a5f5', glow: 'rgba(66,165,245,0.35)', label: 'Sky',       wave: '#42a5f5', waveShadow: 'rgba(66,165,245,0.8)'  },
-  { light: '#fce4ec', mid: '#f8bbd0', dark: '#f48fb1', glow: 'rgba(244,143,177,0.35)', label: 'Bubblegum', wave: '#f06292', waveShadow: 'rgba(240,98,146,0.8)'  },
-  { light: '#f1f8e9', mid: '#c5e1a5', dark: '#8bc34a', glow: 'rgba(139,195,74,0.35)', label: 'Minty',     wave: '#66bb6a', waveShadow: 'rgba(102,187,106,0.8)' },
-  { light: '#fffde7', mid: '#fff176', dark: '#fdd835', glow: 'rgba(253,216,53,0.35)',  label: 'Lemon',     wave: '#fdd835', waveShadow: 'rgba(253,216,53,0.8)'  },
-] as const;
+/* Base 4 colour themes */
+const BASE_COLOR_THEMES = [
+  { light: '#e3f2fd', mid: '#90caf9', dark: '#42a5f5', glow: 'rgba(66,165,245,0.35)',   label: 'Sky',       wave: '#42a5f5', waveShadow: 'rgba(66,165,245,0.8)',   special: false },
+  { light: '#fce4ec', mid: '#f8bbd0', dark: '#f48fb1', glow: 'rgba(244,143,177,0.35)', label: 'Bubblegum', wave: '#f06292', waveShadow: 'rgba(240,98,146,0.8)',   special: false },
+  { light: '#f1f8e9', mid: '#c5e1a5', dark: '#8bc34a', glow: 'rgba(139,195,74,0.35)',  label: 'Minty',     wave: '#66bb6a', waveShadow: 'rgba(102,187,106,0.8)',  special: false },
+  { light: '#fffde7', mid: '#fff176', dark: '#fdd835', glow: 'rgba(253,216,53,0.35)',   label: 'Lemon',     wave: '#fdd835', waveShadow: 'rgba(253,216,53,0.8)',   special: false },
+];
 
-function knobToRobotColor(k: number) {
-  return COLOR_THEMES[k % COLOR_THEMES.length];
+/* Unlock-able extra colours (2 per unlock tier, then specials) */
+const EXTRA_COLOR_THEMES = [
+  // Tier 1 (+2 colors, total 6)
+  { light: '#f3e5f5', mid: '#ce93d8', dark: '#ab47bc', glow: 'rgba(171,71,188,0.35)',  label: 'Grape',     wave: '#ab47bc', waveShadow: 'rgba(171,71,188,0.8)',   special: false },
+  { light: '#e0f7fa', mid: '#80deea', dark: '#00bcd4', glow: 'rgba(0,188,212,0.35)',   label: 'Ocean',     wave: '#00bcd4', waveShadow: 'rgba(0,188,212,0.8)',    special: false },
+  // Tier 2 (+2 more, total 8)
+  { light: '#fff3e0', mid: '#ffcc80', dark: '#ff9800', glow: 'rgba(255,152,0,0.35)',   label: 'Tangerine', wave: '#ff9800', waveShadow: 'rgba(255,152,0,0.8)',    special: false },
+  { light: '#fce4ec', mid: '#ef9a9a', dark: '#e53935', glow: 'rgba(229,57,53,0.35)',   label: 'Crimson',   wave: '#e53935', waveShadow: 'rgba(229,57,53,0.8)',    special: false },
+  // Tier 3 — Shiny Gold & Silver (special)
+  { light: '#fffde7', mid: '#ffe082', dark: '#ffc107', glow: 'rgba(255,193,7,0.6)',    label: '✨ Gold',    wave: '#ffd700', waveShadow: 'rgba(255,215,0,0.95)',   special: true,  gradient: 'linear-gradient(135deg,#fffbe6,#ffe066,#ffd700,#bfa000,#ffd700,#ffe066)' },
+  { light: '#f5f5f5', mid: '#e0e0e0', dark: '#9e9e9e', glow: 'rgba(200,200,200,0.6)', label: '✨ Silver',  wave: '#c0c0c0', waveShadow: 'rgba(192,192,192,0.95)', special: true,  gradient: 'linear-gradient(135deg,#ffffff,#d0d0d0,#a0a0a0,#e8e8e8,#a0a0a0,#d0d0d0)' },
+  // Tier 4 — Black Chrome Rainbow (special)
+  { light: '#1a1a2e', mid: '#16213e', dark: '#0f3460', glow: 'rgba(100,0,200,0.7)',    label: '🌈 Chrome', wave: '#a855f7', waveShadow: 'rgba(168,85,247,0.95)',   special: true,  gradient: 'linear-gradient(135deg,#ff0080,#ff8c00,#ffe000,#00ff88,#00c8ff,#a855f7,#ff0080)', chromatic: true },
+];
+
+/* Face pixel colour palettes — unlockable */
+const FACE_COLOR_PALETTES = [
+  { label: 'Blue',   on: '#42a5f5', glow: 'rgba(66,165,245,0.8)',   gradient: 'radial-gradient(circle at 40% 35%, #c8f0ff, #6dd5fa)' },
+  { label: 'Yellow', on: '#fdd835', glow: 'rgba(253,216,53,0.8)',   gradient: 'radial-gradient(circle at 40% 35%, #fffde7, #ffd600)' },
+  { label: 'Green',  on: '#66bb6a', glow: 'rgba(102,187,106,0.8)',  gradient: 'radial-gradient(circle at 40% 35%, #e8f5e9, #43a047)' },
+  { label: 'Pink',   on: '#f06292', glow: 'rgba(240,98,146,0.8)',   gradient: 'radial-gradient(circle at 40% 35%, #fce4ec, #e91e63)' },
+];
+
+type ColorTheme = {
+  light: string; mid: string; dark: string; glow: string;
+  label: string; wave: string; waveShadow: string; special: boolean;
+  gradient?: string; chromatic?: boolean;
+};
+
+function buildColorThemes(unlockedColorCount: number): ColorTheme[] {
+  const extras = EXTRA_COLOR_THEMES.slice(0, Math.max(0, unlockedColorCount - 4));
+  return [...BASE_COLOR_THEMES, ...extras] as ColorTheme[];
+}
+
+function knobToRobotColor(k: number, themes: ColorTheme[]): ColorTheme {
+  return themes[k % themes.length];
+}
+
+/* How many extra colors unlocked from an array of unlock choices */
+function countUnlockedColors(choices: string[]): number {
+  return choices.filter(c => c === 'color').length * 2;
+}
+function countUnlockedFaceColors(choices: string[]): number {
+  return choices.filter(c => c === 'face').length;
 }
 
 /* ─────────────────────────────────────────────
@@ -67,7 +109,7 @@ function Waveform({ colorIndex }: { colorIndex: number }) {
       const W = canvas!.width;
       const H = canvas!.height;
       ctx.clearRect(0, 0, W, H);
-      const theme = COLOR_THEMES[colorRef.current % COLOR_THEMES.length];
+      const theme = BASE_COLOR_THEMES[colorRef.current % BASE_COLOR_THEMES.length];
 
       // Grid lines tinted to current color
       ctx.strokeStyle = theme.wave + '18';
@@ -114,10 +156,14 @@ function Waveform({ colorIndex }: { colorIndex: number }) {
 /* ─────────────────────────────────────────────
    Robot avatar
 ───────────────────────────────────────────── */
-type RobotColor = ReturnType<typeof knobToRobotColor>;
 
-function RobotAvatar({ level, xp, xpMax, color, facePixels }: { level: number; xp: number; xpMax: number; color: RobotColor; facePixels: string[] | null }) {
-  const { light, mid, dark, glow, label } = color;
+function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }: { level: number; xp: number; xpMax: number; color: ColorTheme; facePixels: string[] | null; faceColorPalettes?: typeof FACE_COLOR_PALETTES }) {
+  const { light, mid, dark, glow } = color;
+  const isChromatic = !!(color as any).chromatic;
+  const bodyBg = (color as any).gradient
+    ? (color as any).gradient
+    : `linear-gradient(145deg,${light},${mid})`;
+  const palettes = faceColorPalettes || FACE_COLOR_PALETTES.slice(0, 1);
   return (
     <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
       <style>{`
@@ -135,18 +181,20 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels }: { level: number; x
 
       <div className="robot-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
         {/* Antenna */}
-        <div style={{ width: 3, height: 22, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: 4, marginBottom: -4, transition: 'background 0.6s ease' }} />
+        <div style={{ width: 3, height: 22, background: isChromatic ? bodyBg : `linear-gradient(180deg,${mid},${dark})`, borderRadius: 4, marginBottom: -4, transition: 'background 0.6s ease' }} />
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: dark, boxShadow: `0 0 10px ${dark}`, transition: 'background 0.6s ease, box-shadow 0.6s ease' }} />
 
         {/* Head */}
-        <div style={{ width: 120, height: 90, background: `linear-gradient(145deg,${light},${mid})`, borderRadius: 24, position: 'relative', boxShadow: `0 8px 24px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
+        <div style={{ width: 120, height: 90, background: bodyBg, borderRadius: 24, position: 'relative', boxShadow: `0 8px 24px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
           {/* Face screen */}
           <div style={{ width: 80, height: 52, background: '#0d1117', borderRadius: 12, overflow: 'hidden', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {facePixels ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: 0, width: 70, height: 44 }}>
-                {facePixels.map((c, i) => (
-                  <div key={i} style={{ background: c === 'on' ? color.wave : '#0d1117' }} />
-                ))}
+                {facePixels.map((c, i) => {
+                  const paletteIdx = c.startsWith('on') ? (parseInt(c.replace('on','') || '0') || 0) : -1;
+                  const pal = paletteIdx >= 0 ? (palettes[paletteIdx] || palettes[0]) : null;
+                  return <div key={i} style={{ background: pal ? pal.on : '#0d1117', boxShadow: pal ? `0 0 2px ${pal.glow}` : 'none' }} />;
+                })}
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, width: '100%', height: '100%' }}>
@@ -163,10 +211,10 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels }: { level: number; x
         </div>
 
         {/* Neck */}
-        <div style={{ width: 28, height: 12, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: 6, transition: 'background 0.6s ease' }} />
+        <div style={{ width: 28, height: 12, background: isChromatic ? bodyBg : `linear-gradient(180deg,${mid},${dark})`, borderRadius: 6, transition: 'background 0.6s ease' }} />
 
         {/* Body */}
-        <div style={{ width: 130, height: 110, background: `linear-gradient(145deg,${light},${mid})`, borderRadius: 28, position: 'relative', boxShadow: `0 10px 30px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
+        <div style={{ width: 130, height: 110, background: bodyBg, borderRadius: 28, position: 'relative', boxShadow: `0 10px 30px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
           {/* Arm nubs */}
           {[-1, 1].map(s => (
             <div key={s} style={{ position: 'absolute', top: 20, [s === -1 ? 'left' : 'right']: -14, width: 18, height: 60, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: 12, transition: 'background 0.6s ease' }} />
@@ -205,46 +253,46 @@ const GRID_COLS = 20;
 const GRID_ROWS = 14;
 const EMPTY_GRID = () => Array(GRID_COLS * GRID_ROWS).fill('off');
 
-function PixelEditor({ waveColor, onSend, onReset }: {
-  waveColor: string;
+function PixelEditor({ faceColorPalettes, onSend, onReset }: {
+  faceColorPalettes: typeof FACE_COLOR_PALETTES;
   onSend: (pixels: string[]) => void;
   onReset: () => void;
 }) {
   const [grid, setGrid] = useState<string[]>(EMPTY_GRID);
-  // Track double-tap for touch: { index, timer }
+  const [selectedPaletteIdx, setSelectedPaletteIdx] = useState(0);
   const lastTap = useRef<{ idx: number; time: number } | null>(null);
+  const activePal = faceColorPalettes[selectedPaletteIdx] || faceColorPalettes[0];
+  const waveColor = activePal.on;
 
   const colorPixel = (i: number) => {
-    setGrid(g => { const n = [...g]; n[i] = 'on'; return n; });
+    setGrid(g => { const n = [...g]; n[i] = `on${selectedPaletteIdx}`; return n; });
   };
   const erasePixel = (i: number) => {
     setGrid(g => { const n = [...g]; n[i] = 'off'; return n; });
   };
-
-  // Mouse: single click = color, double click = erase
-  const handleClick = (i: number) => {
-    colorPixel(i);
-  };
-  const handleDoubleClick = (i: number) => {
-    erasePixel(i);
-  };
-
-  // Touch: single tap = color, double tap = erase
+  const handleClick = (i: number) => { colorPixel(i); };
+  const handleDoubleClick = (i: number) => { erasePixel(i); };
   const handleTouchEnd = (e: React.TouchEvent, i: number) => {
-    e.preventDefault(); // stop ghost click
+    e.preventDefault();
     const now = Date.now();
     if (lastTap.current && lastTap.current.idx === i && now - lastTap.current.time < 350) {
-      // double tap — erase
-      erasePixel(i);
-      lastTap.current = null;
+      erasePixel(i); lastTap.current = null;
     } else {
-      // single tap — color
-      colorPixel(i);
-      lastTap.current = { idx: i, time: now };
+      colorPixel(i); lastTap.current = { idx: i, time: now };
     }
   };
-
   const clearGrid = () => setGrid(EMPTY_GRID());
+
+  const getCellColor = (cell: string) => {
+    if (cell === 'off') return 'rgba(255,255,255,0.04)';
+    const idx = parseInt(cell.replace('on','') || '0') || 0;
+    return (faceColorPalettes[idx] || faceColorPalettes[0]).on;
+  };
+  const getCellGlow = (cell: string) => {
+    if (cell === 'off') return 'none';
+    const idx = parseInt(cell.replace('on','') || '0') || 0;
+    return `0 0 3px ${(faceColorPalettes[idx] || faceColorPalettes[0]).on}88`;
+  };
 
   return (
     <div style={{ marginTop: 12, background: 'linear-gradient(145deg,rgba(255,255,255,0.85),rgba(252,240,255,0.9))', borderRadius: 20, padding: '14px 16px', border: '1.5px solid rgba(255,255,255,0.8)', boxShadow: '0 4px 16px rgba(180,120,220,0.08)' }}>
@@ -257,50 +305,30 @@ function PixelEditor({ waveColor, onSend, onReset }: {
         </span>
       </div>
 
+      {/* Color palette selector */}
+      {faceColorPalettes.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.55rem', color: '#b0b8cc', fontWeight: 600 }}>Color:</span>
+          {faceColorPalettes.map((pal, idx) => (
+            <button key={idx} onClick={() => setSelectedPaletteIdx(idx)} style={{ width: 20, height: 20, borderRadius: '50%', background: pal.on, border: selectedPaletteIdx === idx ? '2px solid #3040a0' : '2px solid transparent', cursor: 'pointer', padding: 0, boxShadow: selectedPaletteIdx === idx ? `0 0 6px ${pal.glow}` : 'none', transition: 'all 0.2s' }} title={pal.label} />
+          ))}
+        </div>
+      )}
+
       {/* Pixel grid */}
-      <div
-        style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gap: 1.5, background: '#0d1117', borderRadius: 10, padding: 7, userSelect: 'none', touchAction: 'none', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)' }}
-      >
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gap: 1.5, background: '#0d1117', borderRadius: 10, padding: 7, userSelect: 'none', touchAction: 'none', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)' }}>
         {grid.map((cell, i) => (
-          <div
-            key={i}
-            onClick={() => handleClick(i)}
-            onDoubleClick={() => handleDoubleClick(i)}
-            onTouchEnd={(e) => handleTouchEnd(e, i)}
-            style={{
-              width: '100%',
-              aspectRatio: '1',
-              borderRadius: 1,
-              background: cell === 'on' ? waveColor : 'rgba(255,255,255,0.04)',
-              border: cell === 'on' ? 'none' : '1px solid rgba(255,255,255,0.05)',
-              cursor: 'crosshair',
-              transition: 'background 0.06s',
-              boxShadow: cell === 'on' ? `0 0 3px ${waveColor}88` : 'none',
-            }}
+          <div key={i} onClick={() => handleClick(i)} onDoubleClick={() => handleDoubleClick(i)} onTouchEnd={(e) => handleTouchEnd(e, i)}
+            style={{ width: '100%', aspectRatio: '1', borderRadius: 1, background: getCellColor(cell), border: cell === 'off' ? '1px solid rgba(255,255,255,0.05)' : 'none', cursor: 'crosshair', transition: 'background 0.06s', boxShadow: getCellGlow(cell) }}
           />
         ))}
       </div>
 
       {/* Buttons */}
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button
-          onClick={clearGrid}
-          style={{ flex: 1, padding: '6px 0', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(180,160,220,0.1)', border: '1px solid rgba(180,160,220,0.25)', borderRadius: 10, color: '#9090c0', cursor: 'pointer', letterSpacing: '0.06em' }}
-        >
-          Clear
-        </button>
-        <button
-          onClick={onReset}
-          style={{ flex: 1, padding: '6px 0', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(100,180,255,0.1)', border: '1px solid rgba(100,180,255,0.25)', borderRadius: 10, color: '#6090c0', cursor: 'pointer', letterSpacing: '0.06em' }}
-        >
-          Reset eyes
-        </button>
-        <button
-          onClick={() => onSend([...grid])}
-          style={{ flex: 1, padding: '6px 0', fontSize: '0.65rem', fontWeight: 800, background: `${waveColor}22`, border: `1px solid ${waveColor}66`, borderRadius: 10, color: waveColor, cursor: 'pointer', letterSpacing: '0.06em', transition: 'background 0.2s' }}
-        >
-          Send ✦
-        </button>
+        <button onClick={clearGrid} style={{ flex: 1, padding: '6px 0', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(180,160,220,0.1)', border: '1px solid rgba(180,160,220,0.25)', borderRadius: 10, color: '#9090c0', cursor: 'pointer', letterSpacing: '0.06em' }}>Clear</button>
+        <button onClick={onReset} style={{ flex: 1, padding: '6px 0', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(100,180,255,0.1)', border: '1px solid rgba(100,180,255,0.25)', borderRadius: 10, color: '#6090c0', cursor: 'pointer', letterSpacing: '0.06em' }}>Reset eyes</button>
+        <button onClick={() => onSend([...grid])} style={{ flex: 1, padding: '6px 0', fontSize: '0.65rem', fontWeight: 800, background: `${waveColor}22`, border: `1px solid ${waveColor}66`, borderRadius: 10, color: waveColor, cursor: 'pointer', letterSpacing: '0.06em', transition: 'background 0.2s' }}>Send ✦</button>
       </div>
     </div>
   );
@@ -309,13 +337,13 @@ function PixelEditor({ waveColor, onSend, onReset }: {
 /* ─────────────────────────────────────────────
    Signal Panel (center hero)
 ───────────────────────────────────────────── */
-function SignalPanel({ knob, onKnobChange }: { knob: number; onKnobChange: (v: number) => void }) {
-  const theme = COLOR_THEMES[knob % COLOR_THEMES.length];
+function SignalPanel({ knob, onKnobChange, colorThemes }: { knob: number; onKnobChange: (v: number) => void; colorThemes: ColorTheme[] }) {
+  const theme = colorThemes[knob % colorThemes.length];
   // 4 positions evenly spaced around the dial: -135°, -45°, 45°, 135°
-  const knobAngle = -135 + (knob % COLOR_THEMES.length) * 90;
+  const knobAngle = -135 + (knob % colorThemes.length) * (270 / Math.max(1, colorThemes.length - 1));
 
   const handleClick = () => {
-    onKnobChange((knob + 1) % COLOR_THEMES.length);
+    onKnobChange((knob + 1) % colorThemes.length);
   };
 
   return (
@@ -330,7 +358,7 @@ function SignalPanel({ knob, onKnobChange }: { knob: number; onKnobChange: (v: n
       <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
         {/* Waveform screen */}
         <div style={{ flex: 1, height: 120, background: '#0a0e1a', borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 2px 12px rgba(0,0,0,0.6), 0 2px 8px rgba(100,80,140,0.15)', border: '1px solid rgba(80,60,100,0.3)' }}>
-          <Waveform colorIndex={knob % COLOR_THEMES.length} />
+          <Waveform colorIndex={knob % colorThemes.length} />
         </div>
 
         {/* Knob — click to cycle */}
@@ -343,6 +371,8 @@ function SignalPanel({ knob, onKnobChange }: { knob: number; onKnobChange: (v: n
             <div style={{ width: 68, height: 68, borderRadius: '50%', border: `2px solid ${theme.wave}55`, position: 'absolute', transition: 'border-color 0.3s' }} />
             {/* Indicator dot — snaps to one of 4 positions */}
             <div style={{ position: 'absolute', width: 8, height: 8, borderRadius: '50%', background: theme.wave, top: 8, left: '50%', marginLeft: -4, transform: `rotate(${knobAngle}deg)`, transformOrigin: '4px 32px', boxShadow: `0 0 6px ${theme.wave}`, transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), background 0.3s, box-shadow 0.3s' }} />
+            {/* Color count indicator */}
+            <div style={{ position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)', fontSize: '0.5rem', color: '#b0b8d0', whiteSpace: 'nowrap' }}>{colorThemes.length} colors</div>
           </div>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.12em', color: theme.dark, textTransform: 'uppercase', transition: 'color 0.3s' }}>{theme.label}</div>
         </div>
@@ -354,6 +384,98 @@ function SignalPanel({ knob, onKnobChange }: { knob: number; onKnobChange: (v: n
 /* ─────────────────────────────────────────────
    Stats panel
 ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Level Up Unlock Modal
+───────────────────────────────────────────── */
+type UnlockChoice = 'color' | 'face';
+
+interface LevelUpModalProps {
+  level: number;
+  unlockedChoices: string[];
+  onChoose: (choice: UnlockChoice) => void;
+}
+
+function LevelUpModal({ level, unlockedChoices, onChoose }: LevelUpModalProps) {
+  const unlockedColorCount = 4 + countUnlockedColors(unlockedChoices);
+  const unlockedFaceColorCount = 1 + countUnlockedFaceColors(unlockedChoices);
+  const canUnlockMoreColors = unlockedColorCount < EXTRA_COLOR_THEMES.length + 4;
+  const canUnlockMoreFace = unlockedFaceColorCount < FACE_COLOR_PALETTES.length;
+
+  const nextColorLabel = () => {
+    const next = unlockedColorCount;
+    if (next >= 8) return '✨ Shiny Gold & Silver';
+    if (next >= 6) return 'Tangerine & Crimson';
+    return 'Grape & Ocean';
+  };
+  const nextFaceLabel = () => {
+    const labels = ['Yellow', 'Green', 'Pink'];
+    return labels[unlockedFaceColorCount - 1] || 'another color';
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+      <div style={{ background: 'linear-gradient(145deg,#1a1040,#2d1b69)', borderRadius: 28, padding: '32px 28px', maxWidth: 380, width: '90%', boxShadow: '0 24px 80px rgba(100,60,220,0.5)', border: '1.5px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🎉</div>
+        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', marginBottom: 4 }}>Level {level}!</div>
+        <div style={{ fontSize: '0.8rem', color: 'rgba(200,180,255,0.8)', marginBottom: 24, fontWeight: 600 }}>Choose your unlock reward</div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Color unlock */}
+          <button
+            onClick={() => canUnlockMoreColors && onChoose('color')}
+            disabled={!canUnlockMoreColors}
+            style={{ padding: '16px 20px', borderRadius: 16, border: '1.5px solid rgba(255,255,255,0.15)', background: canUnlockMoreColors ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', cursor: canUnlockMoreColors ? 'pointer' : 'not-allowed', textAlign: 'left', transition: 'all 0.2s', opacity: canUnlockMoreColors ? 1 : 0.4 }}
+            onMouseEnter={e => { if (canUnlockMoreColors) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = canUnlockMoreColors ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: '1.8rem' }}>🎨</div>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff', marginBottom: 2 }}>+2 Robot Colors</div>
+                <div style={{ fontSize: '0.65rem', color: 'rgba(200,180,255,0.7)' }}>{canUnlockMoreColors ? `Unlocks: ${nextColorLabel()}` : 'All colors unlocked!'}</div>
+                <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                  {Array.from({ length: Math.min(unlockedColorCount + 2, EXTRA_COLOR_THEMES.length + 4) }).map((_, i) => {
+                    const all = [...BASE_COLOR_THEMES, ...EXTRA_COLOR_THEMES];
+                    return <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: all[i % all.length].wave, border: i >= unlockedColorCount ? '1.5px dashed rgba(255,255,255,0.4)' : 'none', opacity: i >= unlockedColorCount ? 0.4 : 1 }} />;
+                  })}
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Face color unlock */}
+          <button
+            onClick={() => canUnlockMoreFace && onChoose('face')}
+            disabled={!canUnlockMoreFace}
+            style={{ padding: '16px 20px', borderRadius: 16, border: '1.5px solid rgba(255,255,255,0.15)', background: canUnlockMoreFace ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', cursor: canUnlockMoreFace ? 'pointer' : 'not-allowed', textAlign: 'left', transition: 'all 0.2s', opacity: canUnlockMoreFace ? 1 : 0.4 }}
+            onMouseEnter={e => { if (canUnlockMoreFace) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = canUnlockMoreFace ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'; }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: '1.8rem' }}>👁️</div>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fff', marginBottom: 2 }}>+1 Face Pixel Color</div>
+                <div style={{ fontSize: '0.65rem', color: 'rgba(200,180,255,0.7)' }}>{canUnlockMoreFace ? `Unlocks: ${nextFaceLabel()} pixels` : 'All face colors unlocked!'}</div>
+                <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                  {FACE_COLOR_PALETTES.map((pal, i) => (
+                    <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: pal.on, border: i >= unlockedFaceColorCount ? '1.5px dashed rgba(255,255,255,0.4)' : 'none', opacity: i >= unlockedFaceColorCount ? 0.4 : 1 }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {(!canUnlockMoreColors && !canUnlockMoreFace) && (
+          <button onClick={() => onChoose('color')} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.75rem' }}>
+            Close (all unlocked!)
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName, studentId }: {
   total: number;
   medals: { gold: number; silver: number; bronze: number };
@@ -768,7 +890,13 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
     } catch { /* ignore */ }
   };
 
-  // Color index (0–3) — stored per student so they keep their chosen color
+  // Unlock system state
+  const [unlockedChoices, setUnlockedChoices] = useState<string[]>([]);
+  const [pendingUnlocks, setPendingUnlocks] = useState(0);
+  const [prevLevel, setPrevLevel] = useState<number | null>(null);
+  const [unlocksLoaded, setUnlocksLoaded] = useState(false);
+
+  // Color index — stored in Supabase via student metadata
   const storageKey = `classcard_robot_knob_${session.user.id}`;
   const [knob, setKnobRaw] = useState<number>(() => {
     try { const v = localStorage.getItem(storageKey); return v !== null ? Math.min(3, Math.max(0, parseInt(v, 10) || 0)) : 0; }
@@ -780,7 +908,43 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
     try { localStorage.setItem(storageKey, String(v)); } catch { /* ignore */ }
   };
 
-  const robotColor = COLOR_THEMES[knob % COLOR_THEMES.length];
+  // Derived unlock counts
+  const unlockedColorCount = 4 + countUnlockedColors(unlockedChoices);
+  const unlockedFaceColorCount = 1 + countUnlockedFaceColors(unlockedChoices);
+  const colorThemes = buildColorThemes(unlockedColorCount);
+  const faceColorPalettes = FACE_COLOR_PALETTES.slice(0, unlockedFaceColorCount);
+  const robotColor = knobToRobotColor(knob, colorThemes);
+
+  // Load unlocks from Supabase
+  useEffect(() => {
+    const loadUnlocks = async () => {
+      if (!studentId) return;
+      const { data } = await sb.from('student_unlocks').select('choices').eq('student_id', studentId).maybeSingle();
+      const choices: string[] = data?.choices || [];
+      setUnlockedChoices(choices);
+      setUnlocksLoaded(true);
+    };
+    if (studentId) loadUnlocks();
+  }, [studentId]);
+
+  // Save a new unlock choice to Supabase
+  const saveUnlockChoice = async (choice: string) => {
+    if (!studentId) return;
+    const newChoices = [...unlockedChoices, choice];
+    setUnlockedChoices(newChoices);
+    await sb.from('student_unlocks').upsert({ student_id: studentId, choices: newChoices }, { onConflict: 'student_id' });
+  };
+
+  // Detect level-ups and queue pending unlocks
+  useEffect(() => {
+    if (!unlocksLoaded || cards.length === 0) return;
+    const currentLevel = Math.max(1, Math.floor(cards.length / 5) + 1);
+    if (prevLevel === null) { setPrevLevel(currentLevel); return; }
+    if (currentLevel > prevLevel) {
+      setPendingUnlocks(p => p + (currentLevel - prevLevel));
+      setPrevLevel(currentLevel);
+    }
+  }, [cards.length, unlocksLoaded]);
 
   const loadCards = useCallback(async () => {
     try {
@@ -848,7 +1012,19 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
           padding: '20px',
         }}
       >
-        {/* Outer container */}
+        {/* Level up unlock modal */}
+      {pendingUnlocks > 0 && (
+        <LevelUpModal
+          level={level}
+          unlockedChoices={unlockedChoices}
+          onChoose={async (choice) => {
+            await saveUnlockChoice(choice);
+            setPendingUnlocks(p => Math.max(0, p - 1));
+          }}
+        />
+      )}
+
+      {/* Outer container */}
         <div style={{
           width: '100%',
           maxWidth: 1160,
@@ -876,7 +1052,7 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
                   You've collected {cards.length} card{cards.length !== 1 ? 's' : ''}
                 </p>
                 <div style={{ marginTop: 16 }}>
-                  <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} />
+                  <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
                 </div>
                 {/* Build a Bot button — under robot */}
                 <div onClick={() => { window.location.hash = '/buildabot'; }} style={{ cursor: 'pointer', marginTop: 10 }}>
@@ -894,9 +1070,9 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
             {/* Signal panel + Pixel editor stacked */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <SignalPanel knob={knob} onKnobChange={setKnob} />
+              <SignalPanel knob={knob} onKnobChange={setKnob} colorThemes={colorThemes} />
               <PixelEditor
-                waveColor={COLOR_THEMES[knob % COLOR_THEMES.length].wave}
+                faceColorPalettes={faceColorPalettes}
                 onSend={setFacePixels}
                 onReset={() => setFacePixels(null)}
               />

@@ -416,6 +416,21 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
         </div>
       </div>
 
+      {/* Build a Bot button */}
+      <div
+        onClick={() => { window.location.hash = '/buildabot'; }}
+        style={{ cursor: 'pointer' }}
+      >
+        <div
+          style={{ background: 'linear-gradient(135deg,#43e97b,#38f9d7,#4facfe)', borderRadius: 18, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 6px 20px rgba(67,233,123,0.3)', cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 28px rgba(67,233,123,0.5)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(67,233,123,0.3)'; }}
+        >
+          <span style={{ fontSize: '0.75rem', fontWeight: 900, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase' }}>Build a Bot</span>
+          <span style={{ fontSize: '1rem' }}>🤖</span>
+        </div>
+      </div>
+
       {/* Weekly scoreboard */}
       <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: 20, padding: '14px 14px', border: '1.5px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 16px rgba(200,160,220,0.08)', backdropFilter: 'blur(8px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>

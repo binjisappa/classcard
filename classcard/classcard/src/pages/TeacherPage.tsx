@@ -9,7 +9,6 @@ import type { Session } from '../lib/auth';
 import type { Student, Card } from '../lib/supabase';
 
 type TabKey = 'generate' | 'build' | 'weekly' | 'cards' | 'students' | 'settings';
-const RARITY_ICONS: Record<string, string> = { common: '⭐', silver: '✦', 'gold-rare': '★', prismatic: '✦✦' };
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'generate', label: '✦ Generate Card' },
@@ -848,22 +847,6 @@ function ModalForm({ fields, onSubmit, submitLabel, error, onCancel }: {
   );
 }
 
-function getRarityBadgeStyle(rarity: string): React.CSSProperties {
-  switch (rarity) {
-    case 'prismatic':
-      return {
-        background: 'linear-gradient(135deg, rgba(255,80,80,0.08), rgba(80,255,120,0.08), rgba(80,180,255,0.08), rgba(200,80,255,0.08))',
-        border: '1px solid rgba(160,80,255,0.3)',
-        color: '#8040a0',
-      };
-    case 'gold-rare':
-      return { background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.3)', color: '#c07800' };
-    case 'silver':
-      return { background: 'rgba(120,160,190,0.1)', border: '1px solid rgba(120,160,190,0.3)', color: '#5a7a90' };
-    default:
-      return { background: 'rgba(200,160,0,0.1)', border: '1px solid rgba(200,160,0,0.3)', color: '#8b6a00' };
-  }
-}
 
 
 
@@ -1332,8 +1315,7 @@ function BuildCardTab({
             ✓ Card saved to <strong>{buildStudent?.name}</strong>'s collection!
           </div>
         ) : (
-          <button onClick={handleSave} disabled={buildSaving} className="tp-btn-primary" style={{ width:'100%' }}
-            style={{ fontFamily: "'Cinzel',serif", fontSize: '0.9rem', opacity: buildSaving ? 0.7 : 1 }}>
+          <button onClick={handleSave} disabled={buildSaving} className="tp-btn-primary" style={{ width:'100%', opacity: buildSaving ? 0.7 : 1 }}>
             {buildSaving ? 'Saving…' : '💾 Save to Student'}
           </button>
         )}
@@ -1341,8 +1323,7 @@ function BuildCardTab({
         {buildSaved && (
           <button
             onClick={() => { setBuildSaved(false); setBuildCard({ name: '', rarity: 'common', type: 'fire', description: '', attack: 75, defense: 60, speed: 50 }); setBuildImage(null); setBuildCroppedImage(null); setBuildStudent(null); resetImage(); }}
-            className="tp-btn-outline" style={{ width:'100%' }}
-            style={{ borderColor: 'rgba(90,40,10,0.25)', color: '#7a5a40' }}>
+            className="tp-btn-outline" style={{ width:'100%' }}>
             ＋ Build Another Card
           </button>
         )}

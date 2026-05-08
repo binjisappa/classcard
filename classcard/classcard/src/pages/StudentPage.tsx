@@ -401,6 +401,21 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
         </div>
       </div>
 
+      {/* Battle button */}
+      <div
+        onClick={() => { window.location.hash = '/arena'; }}
+        style={{ cursor: 'pointer' }}
+      >
+        <div
+          style={{ background: 'linear-gradient(135deg,#f06292,#ab47bc,#64b5f6)', borderRadius: 18, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 6px 20px rgba(180,80,180,0.3)', cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 28px rgba(180,80,180,0.5)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(180,80,180,0.3)'; }}
+        >
+          <span style={{ fontSize: '0.75rem', fontWeight: 900, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase' }}>Battle Arena</span>
+          <span style={{ fontSize: '1rem' }}>⚔️</span>
+        </div>
+      </div>
+
       {/* Weekly scoreboard */}
       <div style={{ background: 'rgba(255,255,255,0.65)', borderRadius: 20, padding: '14px 14px', border: '1.5px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 16px rgba(200,160,220,0.08)', backdropFilter: 'blur(8px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -863,18 +878,15 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
                 <div style={{ marginTop: 16 }}>
                   <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} />
                 </div>
-                {/* Battle button — under robot */}
-                <div
-                  onClick={() => { window.location.hash = '/arena'; }}
-                  style={{ marginTop: 12, cursor: 'pointer' }}
-                >
+                {/* Build a Bot button — under robot */}
+                <div onClick={() => { window.location.hash = '/buildabot'; }} style={{ cursor: 'pointer', marginTop: 10 }}>
                   <div
-                    style={{ background: 'linear-gradient(135deg,#f06292,#ab47bc,#64b5f6)', borderRadius: 14, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 6px 20px rgba(180,80,180,0.3)', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 28px rgba(180,80,180,0.5)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(180,80,180,0.3)'; }}
+                    style={{ background: 'linear-gradient(135deg,#43e97b,#38f9d7,#4facfe)', borderRadius: 14, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 6px 20px rgba(67,233,123,0.3)', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 28px rgba(67,233,123,0.5)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(67,233,123,0.3)'; }}
                   >
-                    <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase' }}>Battle Arena</span>
-                    <span style={{ fontSize: '0.95rem' }}>⚔️</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase' }}>Build a Bot</span>
+                    <span style={{ fontSize: '0.95rem' }}>🤖</span>
                   </div>
                 </div>
               </div>

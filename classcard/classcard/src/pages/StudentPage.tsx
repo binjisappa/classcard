@@ -494,10 +494,22 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
   return (
     <div style={{ width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
       {/* User badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: '10px 14px', border: '1.5px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 12px rgba(200,160,200,0.1)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#fce4ec,#e8eaf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', boxShadow: '0 2px 8px rgba(200,140,180,0.2)', flexShrink: 0 }}>🤖</div>
-        <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.06em', color: '#5060a0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{studentName.toUpperCase()}</span>
-        <button onClick={onSignOut} style={{ fontSize: '0.55rem', color: '#9090c0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>▾</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'rgba(255,255,255,0.7)', borderRadius: 20, border: '1.5px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 12px rgba(200,160,200,0.1)', backdropFilter: 'blur(8px)', overflow: 'hidden' }}>
+        {/* Name area */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', flex: 1, minWidth: 0 }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#fce4ec,#e8eaf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', boxShadow: '0 2px 8px rgba(200,140,180,0.2)', flexShrink: 0 }}>🤖</div>
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.06em', color: '#5060a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{studentName.toUpperCase()}</span>
+        </div>
+        {/* Sign out — square, same height as badge */}
+        <button
+          onClick={onSignOut}
+          title="Sign out"
+          style={{ width: 52, alignSelf: 'stretch', flexShrink: 0, background: 'rgba(220,180,220,0.15)', border: 'none', borderLeft: '1.5px solid rgba(200,160,220,0.2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#9090c0', transition: 'background 0.2s, color 0.2s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(240,100,120,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#e05070'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(220,180,220,0.15)'; (e.currentTarget as HTMLButtonElement).style.color = '#9090c0'; }}
+        >
+          ⏻
+        </button>
       </div>
 
       {/* Stats card */}

@@ -4,6 +4,7 @@ import TeacherPage from './pages/TeacherPage';
 import StudentPage from './pages/StudentPage';
 import AdminPage from './pages/AdminPage';
 import ArenaPage from './pages/ArenaPage';
+import BuildABotPage from './pages/BuildABotPage';
 import { Auth } from './lib/auth';
 import { Router } from './lib/router';
 import type { Session } from './lib/auth';
@@ -11,7 +12,7 @@ import type { Session } from './lib/auth';
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState<'login' | 'teacher' | 'student' | 'admin' | 'arena'>('login');
+  const [page, setPage] = useState<'login' | 'teacher' | 'student' | 'admin' | 'arena' | 'buildabot'>('login');
 
   useEffect(() => {
     init();
@@ -49,6 +50,9 @@ function App() {
         } else if (path.startsWith('/arena')) {
           if (role !== 'student') { Router.navigate('/'); setPage('login'); }
           else setPage('arena');
+        } else if (path.startsWith('/buildabot')) {
+          if (role !== 'student') { Router.navigate('/'); setPage('login'); }
+          else setPage('buildabot');
         } else {
           setPage('login');
         }
@@ -80,6 +84,7 @@ function App() {
       {page === 'student' && <StudentPage session={session!} onSignOut={handleSignOut} />}
       {page === 'admin' && <AdminPage session={session!} onSignOut={handleSignOut} />}
       {page === 'arena' && <ArenaPage session={session!} />}
+      {page === 'buildabot' && <BuildABotPage onBack={() => { Router.navigate('/student'); setPage('student'); }} />}
     </>
   );
 }

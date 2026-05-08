@@ -252,15 +252,18 @@ function LoginPage() {
     }, 400);
   };
 
+  const pinInputRef = useRef<HTMLInputElement>(null);
+
   const addPin = (digit: string) => setStudentPin(prev => prev.length < 6 ? prev + digit : prev);
   const clearPin = () => setStudentPin('');
 
-  // Keyboard support for PIN — active when Student overlay is open
+  // Keyboard support: feed keys into the PIN only when the pin input is NOT focused
+  // (when it IS focused, onChange handles typing directly — no double-entry)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!overlayActive || currentRole !== 'Student') return;
-      // Don't intercept keypresses when the email input is focused
-      if ((e.target as HTMLElement).tagName === 'INPUT' && (e.target as HTMLInputElement).type === 'email') return;
+      if (document.activeElement === pinInputRef.current) return;
+      if ((e.target as HTMLElement).tagName === 'INPUT') return;
       if (/^[0-9]$/.test(e.key)) setStudentPin(prev => prev.length < 6 ? prev + e.key : prev);
       else if (e.key === 'Backspace') setStudentPin(p => p.slice(0, -1));
       else if (e.key === 'Escape') setStudentPin('');
@@ -464,7 +467,7 @@ function LoginPage() {
               <>
                 <div style={{ marginBottom: 10, textAlign: 'left' }}>
                   <label style={{ display: 'block', marginBottom: 5, color: 'rgba(168,230,255,0.5)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05rem' }}>Student PIN</label>
-                  <input type="password" value={studentPin} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setStudentPin(v.slice(0, 6)); }} placeholder="Type or use keypad below"
+                  <input ref={pinInputRef} type="password" value={studentPin} onChange={e => setStudentPin(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Type or tap keypad"
                     style={{ width: '100%', padding: 12, border: '1px solid rgba(168,230,255,0.2)', borderRadius: 12, fontSize: '0.95rem', background: 'rgba(22,27,34,0.8)', color: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }}
                   />
                 </div>

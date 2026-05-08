@@ -935,11 +935,25 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
     await sb.from('student_unlocks').upsert({ student_id: studentId, choices: newChoices }, { onConflict: 'student_id' });
   };
 
-  // Detect level-ups and queue pending unlocks
+  // Detect level-ups and queue pending unlocks.
+  // On first load, compare current level vs choices already made — this
+  // catches students who were already at level 2+ before the unlock system existed.
   useEffect(() => {
     if (!unlocksLoaded || cards.length === 0) return;
     const currentLevel = Math.max(1, Math.floor(cards.length / 5) + 1);
-    if (prevLevel === null) { setPrevLevel(currentLevel); return; }
+
+    if (prevLevel === null) {
+      // First time running after unlocks loaded — check if they have unclaimed unlocks
+      // Each level above 1 earns one unlock, so they should have (currentLevel - 1) choices.
+      // Any deficit means unclaimed unlocks.
+      const earnedUnlocks = currentLevel - 1;
+      const claimedUnlocks = unlockedChoices.length;
+      const owed = Math.max(0, earnedUnlocks - claimedUnlocks);
+      if (owed > 0) setPendingUnlocks(owed);
+      setPrevLevel(currentLevel);
+      return;
+    }
+
     if (currentLevel > prevLevel) {
       setPendingUnlocks(p => p + (currentLevel - prevLevel));
       setPrevLevel(currentLevel);

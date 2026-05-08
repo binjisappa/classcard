@@ -255,6 +255,20 @@ function LoginPage() {
   const addPin = (digit: string) => setStudentPin(prev => prev.length < 6 ? prev + digit : prev);
   const clearPin = () => setStudentPin('');
 
+  // Keyboard support for PIN — active when Student overlay is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!overlayActive || currentRole !== 'Student') return;
+      // Don't intercept keypresses when the email input is focused
+      if ((e.target as HTMLElement).tagName === 'INPUT' && (e.target as HTMLInputElement).type === 'email') return;
+      if (/^[0-9]$/.test(e.key)) setStudentPin(prev => prev.length < 6 ? prev + e.key : prev);
+      else if (e.key === 'Backspace') setStudentPin(p => p.slice(0, -1));
+      else if (e.key === 'Escape') setStudentPin('');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [overlayActive, currentRole]);
+
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -450,7 +464,7 @@ function LoginPage() {
               <>
                 <div style={{ marginBottom: 10, textAlign: 'left' }}>
                   <label style={{ display: 'block', marginBottom: 5, color: 'rgba(168,230,255,0.5)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05rem' }}>Student PIN</label>
-                  <input readOnly type="password" value={studentPin} placeholder="Enter PIN on keypad"
+                  <input type="password" value={studentPin} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setStudentPin(v.slice(0, 6)); }} placeholder="Type or use keypad below"
                     style={{ width: '100%', padding: 12, border: '1px solid rgba(168,230,255,0.2)', borderRadius: 12, fontSize: '0.95rem', background: 'rgba(22,27,34,0.8)', color: '#fff', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }}
                   />
                 </div>

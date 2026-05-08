@@ -158,7 +158,7 @@ function Waveform({ colorIndex }: { colorIndex: number }) {
 ───────────────────────────────────────────── */
 
 function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }: { level: number; xp: number; xpMax: number; color: ColorTheme; facePixels: string[] | null; faceColorPalettes?: typeof FACE_COLOR_PALETTES }) {
-  const { light, mid, dark, glow } = color;
+  const { light, mid, dark, glow, label } = color;
   const isChromatic = !!(color as any).chromatic;
   const bodyBg = (color as any).gradient
     ? (color as any).gradient

@@ -641,7 +641,7 @@ function ArenaPage({ session }: { session: NonNullable<Session> }) {
                 boxShadow: p1Ready && p2Ready ? '0 4px 24px rgba(168,230,255,0.3)' : 'none',
                 transition: 'all 0.2s',
               }}>⚔ START BATTLE ⚔</button>
-              <button onClick={() => { window.location.hash = '/student'; window.location.reload(); }}
+              <button onClick={() => { window.location.hash = '/student'; }}
                 style={{ background: 'transparent', border: '1px solid rgba(168,230,255,0.15)', borderRadius: 8, color: 'rgba(168,230,255,0.4)', padding: '8px 20px', cursor: 'pointer', ...monoStyle, fontSize: '0.75rem' }}>
                 ← Back to Collection
               </button>
@@ -904,7 +904,7 @@ function ArenaPage({ session }: { session: NonNullable<Session> }) {
               style={{ padding: '12px 28px', borderRadius: 10, background: 'rgba(168,230,255,0.1)', border: '1px solid rgba(168,230,255,0.3)', color: '#a8e6ff', fontFamily: "'Cinzel',serif", fontWeight: 800, cursor: 'pointer', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
               ⚔ PLAY AGAIN
             </button>
-            <button onClick={() => { window.location.hash = '/student'; window.location.reload(); }}
+            <button onClick={() => { window.location.hash = '/student'; }}
               style={{ padding: '12px 28px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(168,230,255,0.15)', color: 'rgba(168,230,255,0.5)', cursor: 'pointer', ...monoStyle, fontSize: '0.8rem' }}>
               ← Collection
             </button>

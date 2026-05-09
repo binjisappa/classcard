@@ -1396,6 +1396,50 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
             <WeeklyProjectBanner project={weeklyProject} onClick={() => setShowProject(true)} />
           )}
 
+          {/* ── DEV CARD CONTROLS (bclark@gmail.com only) ── */}
+          {session.user.email === 'bclark@gmail.com' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(239,68,68,0.07)', border: '1.5px dashed rgba(239,68,68,0.35)', borderRadius: 14, marginBottom: 4 }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.08em', color: '#ef4444', textTransform: 'uppercase', flex: 1 }}>🛠 Dev · Cards: {cards.length}</span>
+              <button
+                onClick={async () => {
+                  if (!studentId) return;
+                  const teacherId = cards[0]?.teacher_id ?? 'dev-teacher';
+                  const n = cards.length + 1;
+                  const newCard = await Dashboard.saveCard({
+                    student_id: studentId,
+                    teacher_id: teacherId,
+                    rarity: ['common','silver','gold-rare','prismatic'][n % 4] as Card['rarity'],
+                    card_name: `Dev Card #${n}`,
+                    hp: 40 + (n % 5) * 10,
+                    type: 'Scholar',
+                    description: `Test card ${n} added by dev controls.`,
+                    stat1_name: 'Power',   stat1_val: 50 + n,
+                    stat2_name: 'Speed',   stat2_val: 40 + n,
+                    stat3_name: 'Luck',    stat3_val: 30 + n,
+                    move1_name: 'Test Zap',    move1_dmg: 20,
+                    move2_name: 'Debug Blast', move2_dmg: 35,
+                    image_url: `data:image/svg+xml;utf8,${encodeURIComponent('<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><rect width="150" height="150" rx="18" fill="#1f2937"/><text x="75" y="82" text-anchor="middle" font-size="48">🛠</text></svg>')}`,
+                    card_source: 'generated',
+                  });
+                  setCards(prev => [newCard, ...prev]);
+                }}
+                style={{ padding: '6px 14px', background: '#22c55e', color: 'white', border: 'none', borderRadius: 9, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800 }}
+              >+ Add</button>
+              <button
+                onClick={async () => {
+                  // Remove the most recently added card (first in list)
+                  const devCard = cards.find(c => c.card_name?.startsWith('Dev Card'));
+                  const toRemove = devCard ?? cards[0];
+                  if (!toRemove) return;
+                  await Dashboard.deleteCard(toRemove.id);
+                  setCards(prev => prev.filter(c => c.id !== toRemove.id));
+                }}
+                disabled={cards.length === 0}
+                style={{ padding: '6px 14px', background: cards.length === 0 ? '#6b7280' : '#ef4444', color: 'white', border: 'none', borderRadius: 9, cursor: cards.length === 0 ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800 }}
+              >− Remove</button>
+            </div>
+          )}
+
           {/* ── CARD CAROUSEL ── */}
           <CardCarousel cards={cards} onCardClick={setDetailCard} />
         </div>

@@ -308,8 +308,12 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
     ? (robotColor as any).gradient
     : `linear-gradient(145deg,${robotColor.light},${robotColor.mid})`;
 
+  const isGold        = robotColor.label === '✨ Gold';
+  const isSilver      = robotColor.label === '✨ Silver';
+  const isRainbow     = !!(robotColor as any).rainbow;
+  const isBlackChrome = !!(robotColor as any).blackChrome;
+
   // Remap any element still using the default build colour to the current theme colour.
-  // Elements the user explicitly recoloured keep their custom colour.
   const remapColor = (c: string): string => c === BOT_DEFAULT_COLOR ? robotColor.mid : c;
 
   const themedElements = botElements.map(el => ({
@@ -365,10 +369,6 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
     );
   };
 
-  const isGold        = robotColor.label === '✨ Gold';
-  const isSilver      = robotColor.label === '✨ Silver';
-  const isRainbow     = !!(robotColor as any).rainbow;
-  const isBlackChrome = !!(robotColor as any).blackChrome;
   const isSpecialBot  = isGold || isSilver || isRainbow || isBlackChrome;
   const sheenClass    = isRainbow ? 'sheen-chrome' : isBlackChrome ? 'sheen-black-chrome' : isGold ? 'sheen-gold' : 'sheen-silver';
   const botAnimClass  = isRainbow ? ' bot-rainbow' : isBlackChrome ? ' bg-black-chrome' : isGold ? ' bot-gold' : isSilver ? ' bot-silver' : '';

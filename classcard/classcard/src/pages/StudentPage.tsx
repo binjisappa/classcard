@@ -747,7 +747,7 @@ function SignalPanel({ knob, onKnobChange, colorThemes }: { knob: number; onKnob
 /* ─────────────────────────────────────────────
    Level Up Unlock Modal
 ───────────────────────────────────────────── */
-type UnlockChoice = 'color' | 'face';
+type UnlockChoice = 'color' | 'face' | 'buildabot';
 
 interface LevelUpModalProps {
   level: number;
@@ -825,9 +825,32 @@ function LevelUpModal({ level, unlockedChoices, onChoose }: LevelUpModalProps) {
               </div>
             </div>
           </button>
+
+          {/* Build-a-Bot unlock */}
+          {(() => {
+            const alreadyUnlocked = unlockedChoices.includes('buildabot');
+            return (
+              <button
+                onClick={() => !alreadyUnlocked && onChoose('buildabot')}
+                disabled={alreadyUnlocked}
+                style={{ padding: '16px 20px', borderRadius: 16, border: '1.5px solid rgba(255,255,255,0.15)', background: alreadyUnlocked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.08)', cursor: alreadyUnlocked ? 'not-allowed' : 'pointer', textAlign: 'left', transition: 'all 0.2s', opacity: alreadyUnlocked ? 0.4 : 1, width: '100%' }}
+                onMouseEnter={e => { if (!alreadyUnlocked) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = alreadyUnlocked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.08)'; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white', marginBottom: 2 }}>🤖 Build-a-Bot</div>
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(200,180,255,0.7)' }}>{alreadyUnlocked ? 'Already unlocked!' : 'Unlocks: Build & save your own bot'}</div>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(180,160,255,0.55)', marginTop: 4 }}>Design a custom robot and save it to your profile</div>
+                  </div>
+                  <span style={{ fontSize: '1.4rem', marginLeft: 8 }}>🤖</span>
+                </div>
+              </button>
+            );
+          })()}
         </div>
 
-        {(!canUnlockMoreColors && !canUnlockMoreFace) && (
+        {(!canUnlockMoreColors && !canUnlockMoreFace && unlockedChoices.includes('buildabot')) && (
           <button onClick={() => onChoose('color')} style={{ marginTop: 16, padding: '10px 24px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.75rem' }}>
             Close (all unlocked!)
           </button>
@@ -1454,17 +1477,39 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
                     ↺ Reset to Default Bot
                   </button>
                 )}
-                {/* Build a Bot button — under robot */}
-                <div onClick={() => { window.location.hash = '/buildabot'; }} style={{ cursor: 'pointer', marginTop: 10 }}>
-                  <div
-                    style={{ background: 'linear-gradient(135deg,#43e97b,#38f9d7,#4facfe)', borderRadius: 14, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 6px 20px rgba(67,233,123,0.3)', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 28px rgba(67,233,123,0.5)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 20px rgba(67,233,123,0.3)'; }}
-                  >
-                    <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.1em', color: '#fff', textTransform: 'uppercase' }}>Build a Bot</span>
-                    <span style={{ fontSize: '0.95rem' }}>🤖</span>
-                  </div>
-                </div>
+                {/* Build a Bot button — locked until unlocked via level up */}
+                {(() => {
+                  const buildabotUnlocked = unlockedChoices.includes('buildabot');
+                  return (
+                    <div
+                      onClick={() => { if (buildabotUnlocked) window.location.hash = '/buildabot'; }}
+                      style={{ cursor: buildabotUnlocked ? 'pointer' : 'not-allowed', marginTop: 10 }}
+                    >
+                      <div
+                        style={{
+                          background: buildabotUnlocked
+                            ? 'linear-gradient(135deg,#43e97b,#38f9d7,#4facfe)'
+                            : 'rgba(180,180,190,0.25)',
+                          borderRadius: 14, padding: '11px 14px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          boxShadow: buildabotUnlocked ? '0 6px 20px rgba(67,233,123,0.3)' : 'none',
+                          transition: 'all 0.2s',
+                          border: buildabotUnlocked ? 'none' : '1.5px dashed rgba(150,150,160,0.4)',
+                        }}
+                        onMouseEnter={e => { if (buildabotUnlocked) { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 28px rgba(67,233,123,0.5)'; }}}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = buildabotUnlocked ? '0 6px 20px rgba(67,233,123,0.3)' : 'none'; }}
+                      >
+                        <div>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.1em', color: buildabotUnlocked ? '#fff' : 'rgba(120,120,130,0.8)', textTransform: 'uppercase', display: 'block' }}>Build a Bot</span>
+                          {!buildabotUnlocked && (
+                            <span style={{ fontSize: '0.55rem', color: 'rgba(120,120,130,0.65)', fontWeight: 600, letterSpacing: '0.05em' }}>🔒 Unlock via Level Up</span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.95rem', opacity: buildabotUnlocked ? 1 : 0.35 }}>🤖</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

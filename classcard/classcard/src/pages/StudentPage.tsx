@@ -532,9 +532,12 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: dark, boxShadow: `0 0 10px ${dark}`, transition: 'background 0.6s ease, box-shadow 0.6s ease' }} />
 
         {/* Head */}
-        <div style={{ width: 120, height: 90, background: bodyBg, borderRadius: 24, position: 'relative', boxShadow: `0 8px 24px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
-          <Sheen rounded={24} />
-          {/* Face screen */}
+        <div style={{ width: 120, height: 90, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Background layer — overflow:hidden clips the gradient/chrome to border-radius */}
+          <div style={{ position: 'absolute', inset: 0, background: bodyBg, borderRadius: 24, boxShadow: `0 8px 24px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, overflow: 'hidden', transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
+            <Sheen rounded={24} />
+          </div>
+          {/* Face screen — sits above background layer */}
           <div style={{ width: 80, height: 52, background: '#0d1117', borderRadius: 12, overflow: 'hidden', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 4 }}>
             {facePixels ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: 0, width: 70, height: 44 }}>

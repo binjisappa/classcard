@@ -94,11 +94,13 @@ function countUnlockedFaceColors(choices: string[]): number {
 /* ─────────────────────────────────────────────
    Waveform canvas component
 ───────────────────────────────────────────── */
-function Waveform({ colorIndex }: { colorIndex: number }) {
+function Waveform({ colorIndex, colorThemes }: { colorIndex: number; colorThemes: ColorTheme[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const colorRef = useRef(colorIndex);
   colorRef.current = colorIndex;
+  const themesRef = useRef(colorThemes);
+  themesRef.current = colorThemes;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -109,7 +111,7 @@ function Waveform({ colorIndex }: { colorIndex: number }) {
       const W = canvas!.width;
       const H = canvas!.height;
       ctx.clearRect(0, 0, W, H);
-      const theme = BASE_COLOR_THEMES[colorRef.current % BASE_COLOR_THEMES.length];
+      const theme = themesRef.current[colorRef.current % themesRef.current.length];
 
       // Grid lines tinted to current color
       ctx.strokeStyle = theme.wave + '18';
@@ -198,7 +200,7 @@ const CONTAINER_H = 293;
 
 const STICKER_MAP: Record<string, string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
 
-function renderBotEl(el: BotEl): React.ReactNode {
+function renderBotEl(el: BotEl & { _bodyBg?: string }): React.ReactNode {
   const isGroup   = el.type === 'group';
   const isFace    = el.type === 'face';
   const isChest   = el.type === 'chest';
@@ -214,16 +216,14 @@ function renderBotEl(el: BotEl): React.ReactNode {
     height: isGroup ? (el.baseH ?? el.h) : el.h,
     transform: `translate(-50%,-50%) rotate(${el.rotation}deg) scale(${isGroup ? (el.scale ?? 1) : 1}) scaleX(${el.flipX ? -1 : 1}) scaleY(${el.flipY ? -1 : 1})`,
     borderRadius: isCircle ? '50%' : (typeof el.rx === 'number' ? el.rx : 0),
-    backgroundColor: (isGroup || isSticker) ? 'transparent' : el.color,
-    // Screens get a dark inset glow; normal parts get a neumorphic-lite shadow
+    background: el._bodyBg || undefined,
+    backgroundColor: el._bodyBg ? undefined : ((isGroup || isSticker) ? 'transparent' : el.color),
     boxShadow: isScreen
       ? 'inset 0 0 14px rgba(0,0,0,0.85)'
       : (!isGroup && !isSticker)
         ? 'inset 6px 6px 12px rgba(255,255,255,0.65), inset -6px -6px 12px rgba(0,0,0,0.06), 8px 8px 16px rgba(0,0,0,0.08)'
         : undefined,
-    // Screens must clip their content (eyes / bars); groups must NOT clip
     overflow: isScreen ? 'hidden' : 'visible',
-    // Use z-index to mirror BuildABot: screens sit above body parts
     zIndex: isScreen ? 2 : 1,
   };
 
@@ -283,7 +283,7 @@ function renderBotEl(el: BotEl): React.ReactNode {
   );
 }
 
-function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[] | null; faceColorPalettes: typeof FACE_COLOR_PALETTES }) {
+function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePixels: string[] | null; faceColorPalettes: typeof FACE_COLOR_PALETTES; robotColor: ColorTheme }) {
   const [botElements, setBotElements] = useState<BotEl[] | null>(null);
 
   useEffect(() => {
@@ -301,8 +301,38 @@ function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[
 
   if (!botElements) return null;
 
+  // The default bot colour used in BuildABotPage
+  const BOT_DEFAULT_COLOR = '#d6edb9';
+  const isChromatic = !!(robotColor as any).chromatic;
+  const bodyBg = isChromatic
+    ? (robotColor as any).gradient
+    : `linear-gradient(145deg,${robotColor.light},${robotColor.mid})`;
+
+  // Remap any element still using the default build colour to the current theme colour.
+  // Elements the user explicitly recoloured keep their custom colour.
+  const remapColor = (c: string): string => c === BOT_DEFAULT_COLOR ? robotColor.mid : c;
+
+  const themedElements = botElements.map(el => ({
+    ...el,
+    color: remapColor(el.color),
+    children: el.children?.map(c => ({ ...c, color: remapColor(c.color) })),
+  }));
+
+  // For chromatic/special themes, rects that use the theme colour should show the gradient
+  const themedElementsWithGradient = isChromatic
+    ? themedElements.map(el => ({
+        ...el,
+        // Store the gradient as a special marker so renderBotEl can apply it
+        _bodyBg: el.color === robotColor.mid ? bodyBg : undefined,
+        children: el.children?.map(c => ({
+          ...c,
+          _bodyBg: c.color === robotColor.mid ? bodyBg : undefined,
+        })),
+      }))
+    : themedElements;
+
   // Compute the actual bounding box of this specific bot
-  const bounds = getBotBounds(botElements);
+  const bounds = getBotBounds(themedElementsWithGradient);
   // Scale so the bot fills the container while preserving aspect ratio (fit, not fill)
   const scale = Math.min(CONTAINER_W / bounds.w, CONTAINER_H / bounds.h);
   const displayW = bounds.w * scale;
@@ -310,8 +340,8 @@ function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[
 
   // Inject pixel face data into face-screen element
   const elementsWithPixels = facePixels
-    ? botElements.map(el => el.type === 'face' ? { ...el, _facePixels: facePixels, _palettes: faceColorPalettes } : el)
-    : botElements;
+    ? themedElementsWithGradient.map(el => el.type === 'face' ? { ...el, _facePixels: facePixels, _palettes: faceColorPalettes } : el)
+    : themedElementsWithGradient;
 
   // Render face screen content with pixel support (mirrors StudentPage RobotAvatar logic)
   const renderFaceContent = (el: any) => {
@@ -590,7 +620,7 @@ function SignalPanel({ knob, onKnobChange, colorThemes }: { knob: number; onKnob
       <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
         {/* Waveform screen */}
         <div style={{ flex: 1, height: 120, background: '#0a0e1a', borderRadius: 16, overflow: 'hidden', boxShadow: 'inset 0 2px 12px rgba(0,0,0,0.6), 0 2px 8px rgba(100,80,140,0.15)', border: '1px solid rgba(80,60,100,0.3)' }}>
-          <Waveform colorIndex={knob % colorThemes.length} />
+          <Waveform colorIndex={knob % colorThemes.length} colorThemes={colorThemes} />
         </div>
 
         {/* Knob — click to cycle */}
@@ -1312,7 +1342,7 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
                 </p>
                 <div style={{ marginTop: 16 }}>
                   {localStorage.getItem('savedBot')
-                    ? <SavedBotAvatar key={savedBotKey} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
+                    ? <SavedBotAvatar key={savedBotKey} facePixels={facePixels} faceColorPalettes={faceColorPalettes} robotColor={robotColor} />
                     : <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
                   }
                 </div>

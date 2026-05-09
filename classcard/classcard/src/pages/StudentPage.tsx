@@ -157,7 +157,6 @@ function Waveform({ colorIndex }: { colorIndex: number }) {
    Saved Bot Avatar (from Build-a-Bot)
 ───────────────────────────────────────────── */
 
-// Re-export the same element types used in BuildABotPage
 type BotElType = 'rect' | 'circle' | 'face' | 'chest' | 'group' | 'apple' | 'smiley' | 'heart' | 'thumbsup' | 'lips';
 interface BotEl {
   id: string; type: BotElType; cx: number; cy: number; w: number; h: number;
@@ -165,7 +164,104 @@ interface BotEl {
   baseW?: number; baseH?: number; children?: BotEl[]; flipX?: boolean; flipY?: boolean;
 }
 
-function SavedBotAvatar() {
+// The BuildABot canvas is 800×850. The bot content occupies roughly:
+// y: 45 (top of antenna ball) → 760 (bottom of legs)  = 715px tall
+// x: 55 (left arm edge) → 505 (right arm edge)         = 450px wide
+// We scale to match the default RobotAvatar height (~293px).
+const BAB_SCALE = 293 / 715;          // ≈ 0.41
+const BAB_VIEWPORT_W = Math.round(450 * BAB_SCALE);  // ≈ 184px
+const BAB_VIEWPORT_H = Math.round(715 * BAB_SCALE);  // ≈ 293px
+const BAB_OFFSET_X   = Math.round(55  * BAB_SCALE);  // left crop offset in display px
+const BAB_OFFSET_Y   = Math.round(45  * BAB_SCALE);  // top  crop offset in display px
+
+const STICKER_MAP: Record<string, string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
+
+function renderBotEl(el: BotEl): React.ReactNode {
+  const isGroup   = el.type === 'group';
+  const isFace    = el.type === 'face';
+  const isChest   = el.type === 'chest';
+  const isScreen  = isFace || isChest;
+  const isCircle  = el.type === 'circle';
+  const isSticker = ['apple','smiley','heart','thumbsup','lips'].includes(el.type);
+
+  const containerStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: el.cx,
+    top: el.cy,
+    width:  isGroup ? (el.baseW ?? el.w) : el.w,
+    height: isGroup ? (el.baseH ?? el.h) : el.h,
+    transform: `translate(-50%,-50%) rotate(${el.rotation}deg) scale(${isGroup ? (el.scale ?? 1) : 1}) scaleX(${el.flipX ? -1 : 1}) scaleY(${el.flipY ? -1 : 1})`,
+    borderRadius: isCircle ? '50%' : (typeof el.rx === 'number' ? el.rx : 0),
+    backgroundColor: (isGroup || isSticker) ? 'transparent' : el.color,
+    // Screens get a dark inset glow; normal parts get a neumorphic-lite shadow
+    boxShadow: isScreen
+      ? 'inset 0 0 14px rgba(0,0,0,0.85)'
+      : (!isGroup && !isSticker)
+        ? 'inset 6px 6px 12px rgba(255,255,255,0.65), inset -6px -6px 12px rgba(0,0,0,0.06), 8px 8px 16px rgba(0,0,0,0.08)'
+        : undefined,
+    // Screens must clip their content (eyes / bars); groups must NOT clip
+    overflow: isScreen ? 'hidden' : 'visible',
+    // Use z-index to mirror BuildABot: screens sit above body parts
+    zIndex: isScreen ? 2 : 1,
+  };
+
+  const renderScreenContent = (type: string, w: number, h: number) => {
+    if (type === 'face') {
+      return (
+        <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'15%' }}>
+          <div style={{ width:'22%', aspectRatio:'1', borderRadius:'50%', background:'#8be9fd', boxShadow:'0 0 14px #8be9fd, inset 0 0 8px white' }} />
+          <div style={{ width:'22%', aspectRatio:'1', borderRadius:'50%', background:'#8be9fd', boxShadow:'0 0 14px #8be9fd, inset 0 0 8px white' }} />
+        </div>
+      );
+    }
+    if (type === 'chest') {
+      const fs = Math.round(w * 0.14);
+      return (
+        <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap: Math.round(h * 0.06) }}>
+          <span style={{ fontSize: fs, fontWeight:700, color:'#8be9fd', letterSpacing:'0.05em' }}>LVL 5</span>
+          <div style={{ width:'75%', height: Math.max(3, Math.round(h * 0.04)), background:'#1f2937', borderRadius:9999, overflow:'hidden' }}>
+            <div style={{ width:'66%', height:'100%', background:'linear-gradient(90deg,#60a5fa,#a855f7)', borderRadius:9999 }} />
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderChildEl = (c: BotEl, ci: number) => {
+    const cIsScreen  = c.type === 'face' || c.type === 'chest';
+    const cIsCircle  = c.type === 'circle';
+    const cIsSticker = ['apple','smiley','heart','thumbsup','lips'].includes(c.type);
+    return (
+      <div key={ci} style={{
+        position: 'absolute',
+        left: '50%', top: '50%',
+        width: c.w, height: c.h,
+        marginLeft: c.cx, marginTop: c.cy,
+        transform: `translate(-50%,-50%) rotate(${c.rotation}deg) scaleX(${c.flipX?-1:1}) scaleY(${c.flipY?-1:1})`,
+        backgroundColor: cIsSticker ? 'transparent' : (c.color || el.color),
+        borderRadius: cIsCircle ? '50%' : (typeof c.rx === 'number' ? c.rx : 0),
+        overflow: cIsScreen ? 'hidden' : 'visible',
+        zIndex: cIsScreen ? 2 : 1,
+        boxShadow: cIsScreen ? 'inset 0 0 14px rgba(0,0,0,0.85)' : undefined,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {cIsSticker && <span style={{ fontSize: c.w * 0.7, lineHeight:1 }}>{STICKER_MAP[c.type]}</span>}
+        {cIsScreen  && renderScreenContent(c.type, c.w, c.h)}
+      </div>
+    );
+  };
+
+  return (
+    <div key={el.id} style={containerStyle}>
+      {isGroup   && (el.children ?? []).map((c, ci) => renderChildEl(c, ci))}
+      {isSticker && <span style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize: el.w * 0.7, lineHeight:1 }}>{STICKER_MAP[el.type]}</span>}
+      {isScreen  && renderScreenContent(el.type, el.w, el.h)}
+    </div>
+  );
+}
+
+function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[] | null; faceColorPalettes: typeof FACE_COLOR_PALETTES }) {
   const [botElements, setBotElements] = useState<BotEl[] | null>(null);
 
   useEffect(() => {
@@ -183,90 +279,79 @@ function SavedBotAvatar() {
 
   if (!botElements) return null;
 
-  // The BuildABot canvas is 800×850; we scale it to ~180px wide to fit the avatar slot
-  const SCALE = 180 / 800;
-  const CANVAS_W = 800;
-  const CANVAS_H = 850;
+  // Inject the pixel face into the face-screen element for live display
+  const elementsWithPixels = facePixels
+    ? botElements.map(el => el.type === 'face' ? { ...el, _facePixels: facePixels, _palettes: faceColorPalettes } : el)
+    : botElements;
 
-  const renderEl = (el: BotEl, key: string) => {
-    const isGroup = el.type === 'group';
-    const isScreen = el.type === 'face' || el.type === 'chest';
-    const isCircle = el.type === 'circle';
-    const isSticker = ['apple','smiley','heart','thumbsup','lips'].includes(el.type);
-    const stickerMap: Record<string,string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
-
-    const style: React.CSSProperties = {
-      position: 'absolute',
-      left: el.cx,
-      top: el.cy,
-      width: isGroup ? el.baseW : el.w,
-      height: isGroup ? el.baseH : el.h,
-      transform: `translate(-50%,-50%) rotate(${el.rotation}deg) scale(${isGroup ? (el.scale||1) : 1})`,
-      borderRadius: isCircle ? '50%' : (typeof el.rx === 'number' ? el.rx : undefined),
-      backgroundColor: (isGroup || isSticker) ? 'transparent' : el.color,
-      boxShadow: isScreen ? 'inset 0px 0px 10px rgba(0,0,0,0.8)' : undefined,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      overflow: 'hidden',
-    };
-
+  // Render face screen content with pixel support (mirrors StudentPage RobotAvatar logic)
+  const renderFaceContent = (el: any) => {
+    const pixels: string[] | null = el._facePixels ?? null;
+    const palettes: typeof FACE_COLOR_PALETTES = el._palettes ?? FACE_COLOR_PALETTES.slice(0,1);
+    if (pixels) {
+      return (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(20, 1fr)', gap:0, width:'85%', height:'85%' }}>
+          {pixels.map((c: string, i: number) => {
+            const paletteIdx = c.startsWith('on') ? (parseInt(c.replace('on','') || '0') || 0) : -1;
+            const pal = paletteIdx >= 0 ? (palettes[paletteIdx] || palettes[0]) : null;
+            return <div key={i} style={{ background: pal ? pal.on : 'transparent', boxShadow: pal ? `0 0 2px ${pal.glow}` : 'none' }} />;
+          })}
+        </div>
+      );
+    }
     return (
-      <div key={key} style={style}>
-        {isGroup && (el.children || []).map((c, ci) => (
-          <div key={ci} style={{
-            position: 'absolute', left: '50%', top: '50%',
-            width: c.w, height: c.h,
-            marginLeft: c.cx, marginTop: c.cy,
-            transform: `translate(-50%,-50%) rotate(${c.rotation}deg) scaleX(${c.flipX?-1:1}) scaleY(${c.flipY?-1:1})`,
-            backgroundColor: ['apple','smiley','heart','thumbsup','lips'].includes(c.type) ? 'transparent' : (c.color || el.color),
-            borderRadius: c.type === 'circle' ? '50%' : (typeof c.rx === 'number' ? c.rx : undefined),
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: c.w * 0.7,
-            boxShadow: (c.type==='face'||c.type==='chest') ? 'inset 0px 0px 10px rgba(0,0,0,0.8)' : undefined,
-          }}>
-            {['apple','smiley','heart','thumbsup','lips'].includes(c.type) && <span style={{fontSize: c.w * 0.7, lineHeight:1}}>{stickerMap[c.type]}</span>}
-            {c.type === 'face' && (
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'15%',width:'100%',height:'100%'}}>
-                <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
-                <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
-              </div>
-            )}
-          </div>
-        ))}
-        {isSticker && <span style={{fontSize: el.w * 0.7, lineHeight:1}}>{stickerMap[el.type]}</span>}
-        {el.type === 'face' && (
-          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'15%',width:'100%',height:'100%'}}>
-            <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
-            <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
-          </div>
-        )}
-        {el.type === 'chest' && (
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',width:'100%',height:'100%',gap:4}}>
-            <span style={{fontSize: el.w*0.12, fontWeight:700, color:'#8be9fd', letterSpacing:'0.05em'}}>LVL 5</span>
-            <div style={{width:'75%',height:4,background:'#1f2937',borderRadius:9999,overflow:'hidden'}}>
-              <div style={{width:'66%',height:'100%',background:'linear-gradient(90deg,#60a5fa,#a855f7)',borderRadius:9999}} />
-            </div>
-          </div>
-        )}
+      <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'15%' }}>
+        <div style={{ width:'22%', aspectRatio:'1', borderRadius:'50%', background:'#8be9fd', boxShadow:'0 0 14px #8be9fd, inset 0 0 8px white' }} />
+        <div style={{ width:'22%', aspectRatio:'1', borderRadius:'50%', background:'#8be9fd', boxShadow:'0 0 14px #8be9fd, inset 0 0 8px white' }} />
       </div>
     );
   };
 
   return (
-    <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
-      <div style={{
-        position: 'relative',
-        width: CANVAS_W * SCALE,
-        height: CANVAS_H * SCALE,
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute',
-          width: CANVAS_W,
-          height: CANVAS_H,
-          transform: `scale(${SCALE})`,
-          transformOrigin: 'top left',
-        }}>
-          {botElements.map((el, i) => renderEl(el, el.id || String(i)))}
+    <div style={{ position: 'relative', width: BAB_VIEWPORT_W, flexShrink: 0 }}>
+      <style>{`
+        @keyframes savedBotBounce {
+          0%,100% { transform: translateY(0); }
+          50%      { transform: translateY(-6px); }
+        }
+        .saved-bot-body { animation: savedBotBounce 3s ease-in-out infinite; }
+      `}</style>
+      {/* Outer clip to the viewport size */}
+      <div style={{ width: BAB_VIEWPORT_W, height: BAB_VIEWPORT_H, overflow: 'hidden', position: 'relative' }}>
+        {/* Bounce wrapper — bounces the scaled canvas */}
+        <div className="saved-bot-body" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+          {/* Scale + crop: the full 800×850 canvas scaled down, then offset to crop to the bot */}
+          <div style={{
+            position: 'absolute',
+            width: 800,
+            height: 850,
+            transform: `scale(${BAB_SCALE})`,
+            transformOrigin: 'top left',
+            // Offset to crop: shift left/up by the pre-scaled origin so only the bot is visible
+            left: -Math.round(55 * BAB_SCALE),   // shift left: removes left padding
+            top:  -Math.round(45 * BAB_SCALE),   // shift up: removes top antenna padding
+          }}>
+            {elementsWithPixels.map((el: any) => {
+              // For face elements with pixel data, render a special version
+              if (el.type === 'face') {
+                const isScreen = true;
+                const containerStyle: React.CSSProperties = {
+                  position: 'absolute',
+                  left: el.cx, top: el.cy,
+                  width: el.w, height: el.h,
+                  transform: `translate(-50%,-50%) rotate(${el.rotation}deg)`,
+                  borderRadius: typeof el.rx === 'number' ? el.rx : 0,
+                  backgroundColor: el.color,
+                  boxShadow: 'inset 0 0 14px rgba(0,0,0,0.85)',
+                  overflow: 'hidden',
+                  zIndex: 2,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                };
+                return <div key={el.id} style={containerStyle}>{renderFaceContent(el)}</div>;
+              }
+              return renderBotEl(el);
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -1200,7 +1285,7 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
                 </p>
                 <div style={{ marginTop: 16 }}>
                   {localStorage.getItem('savedBot')
-                    ? <SavedBotAvatar key={savedBotKey} />
+                    ? <SavedBotAvatar key={savedBotKey} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
                     : <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
                   }
                 </div>

@@ -154,6 +154,126 @@ function Waveform({ colorIndex }: { colorIndex: number }) {
 }
 
 /* ─────────────────────────────────────────────
+   Saved Bot Avatar (from Build-a-Bot)
+───────────────────────────────────────────── */
+
+// Re-export the same element types used in BuildABotPage
+type BotElType = 'rect' | 'circle' | 'face' | 'chest' | 'group' | 'apple' | 'smiley' | 'heart' | 'thumbsup' | 'lips';
+interface BotEl {
+  id: string; type: BotElType; cx: number; cy: number; w: number; h: number;
+  rotation: number; rx?: number | string; color: string; scale?: number;
+  baseW?: number; baseH?: number; children?: BotEl[]; flipX?: boolean; flipY?: boolean;
+}
+
+function SavedBotAvatar() {
+  const [botElements, setBotElements] = useState<BotEl[] | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem('savedBot');
+    if (raw) { try { setBotElements(JSON.parse(raw)); } catch { setBotElements(null); } }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'savedBot') {
+        if (e.newValue) { try { setBotElements(JSON.parse(e.newValue)); } catch { setBotElements(null); } }
+        else setBotElements(null);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  if (!botElements) return null;
+
+  // The BuildABot canvas is 800×850; we scale it to ~180px wide to fit the avatar slot
+  const SCALE = 180 / 800;
+  const CANVAS_W = 800;
+  const CANVAS_H = 850;
+
+  const renderEl = (el: BotEl, key: string) => {
+    const isGroup = el.type === 'group';
+    const isScreen = el.type === 'face' || el.type === 'chest';
+    const isCircle = el.type === 'circle';
+    const isSticker = ['apple','smiley','heart','thumbsup','lips'].includes(el.type);
+    const stickerMap: Record<string,string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
+
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      left: el.cx,
+      top: el.cy,
+      width: isGroup ? el.baseW : el.w,
+      height: isGroup ? el.baseH : el.h,
+      transform: `translate(-50%,-50%) rotate(${el.rotation}deg) scale(${isGroup ? (el.scale||1) : 1})`,
+      borderRadius: isCircle ? '50%' : (typeof el.rx === 'number' ? el.rx : undefined),
+      backgroundColor: (isGroup || isSticker) ? 'transparent' : el.color,
+      boxShadow: isScreen ? 'inset 0px 0px 10px rgba(0,0,0,0.8)' : undefined,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden',
+    };
+
+    return (
+      <div key={key} style={style}>
+        {isGroup && (el.children || []).map((c, ci) => (
+          <div key={ci} style={{
+            position: 'absolute', left: '50%', top: '50%',
+            width: c.w, height: c.h,
+            marginLeft: c.cx, marginTop: c.cy,
+            transform: `translate(-50%,-50%) rotate(${c.rotation}deg) scaleX(${c.flipX?-1:1}) scaleY(${c.flipY?-1:1})`,
+            backgroundColor: ['apple','smiley','heart','thumbsup','lips'].includes(c.type) ? 'transparent' : (c.color || el.color),
+            borderRadius: c.type === 'circle' ? '50%' : (typeof c.rx === 'number' ? c.rx : undefined),
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: c.w * 0.7,
+            boxShadow: (c.type==='face'||c.type==='chest') ? 'inset 0px 0px 10px rgba(0,0,0,0.8)' : undefined,
+          }}>
+            {['apple','smiley','heart','thumbsup','lips'].includes(c.type) && <span style={{fontSize: c.w * 0.7, lineHeight:1}}>{stickerMap[c.type]}</span>}
+            {c.type === 'face' && (
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'15%',width:'100%',height:'100%'}}>
+                <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
+                <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
+              </div>
+            )}
+          </div>
+        ))}
+        {isSticker && <span style={{fontSize: el.w * 0.7, lineHeight:1}}>{stickerMap[el.type]}</span>}
+        {el.type === 'face' && (
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'15%',width:'100%',height:'100%'}}>
+            <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
+            <div style={{width:'22%',aspectRatio:'1',borderRadius:'50%',background:'#8be9fd',boxShadow:'0 0 6px #8be9fd'}} />
+          </div>
+        )}
+        {el.type === 'chest' && (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',width:'100%',height:'100%',gap:4}}>
+            <span style={{fontSize: el.w*0.12, fontWeight:700, color:'#8be9fd', letterSpacing:'0.05em'}}>LVL 5</span>
+            <div style={{width:'75%',height:4,background:'#1f2937',borderRadius:9999,overflow:'hidden'}}>
+              <div style={{width:'66%',height:'100%',background:'linear-gradient(90deg,#60a5fa,#a855f7)',borderRadius:9999}} />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
+      <div style={{
+        position: 'relative',
+        width: CANVAS_W * SCALE,
+        height: CANVAS_H * SCALE,
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute',
+          width: CANVAS_W,
+          height: CANVAS_H,
+          transform: `scale(${SCALE})`,
+          transformOrigin: 'top left',
+        }}>
+          {botElements.map((el, i) => renderEl(el, el.id || String(i)))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Robot avatar
 ───────────────────────────────────────────── */
 
@@ -889,6 +1009,7 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const [showProject, setShowProject] = useState(false);
   const [medals, setMedals] = useState({ gold: 0, silver: 0, bronze: 0 });
   const [scoreboard, setScoreboard] = useState<{ student_id: string; name: string; wins: number }[]>([]);
+  const [savedBotKey, setSavedBotKey] = useState(0);
   const faceKey = `classcard_face_${session.user.id}`;
   const [facePixels, setFacePixelsRaw] = useState<string[] | null>(() => {
     try { const v = localStorage.getItem(faceKey); return v ? JSON.parse(v) : null; }
@@ -1078,8 +1199,20 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
                   You've collected {cards.length} card{cards.length !== 1 ? 's' : ''}
                 </p>
                 <div style={{ marginTop: 16 }}>
-                  <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
+                  {localStorage.getItem('savedBot')
+                    ? <SavedBotAvatar key={savedBotKey} />
+                    : <RobotAvatar level={level} xp={xp} xpMax={500} color={robotColor} facePixels={facePixels} faceColorPalettes={faceColorPalettes} />
+                  }
                 </div>
+                {/* Reset to default bot — only shown when a saved bot exists */}
+                {localStorage.getItem('savedBot') && (
+                  <button
+                    onClick={() => { localStorage.removeItem('savedBot'); setSavedBotKey(k => k + 1); }}
+                    style={{ width: '100%', marginTop: 8, padding: '7px 10px', background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, cursor: 'pointer', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.04em' }}
+                  >
+                    ↺ Reset to Default Bot
+                  </button>
+                )}
                 {/* Build a Bot button — under robot */}
                 <div onClick={() => { window.location.hash = '/buildabot'; }} style={{ cursor: 'pointer', marginTop: 10 }}>
                   <div

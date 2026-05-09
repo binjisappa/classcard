@@ -200,6 +200,7 @@ export default function BuildABotPage({ onBack }: BuildABotPageProps) {
   const [action, setAction] = useState<any>(null);
   const [pendingMergeId, setPendingMergeId] = useState<string | null>(null);
   const [isStickerOpen, setIsStickerOpen] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const lastTap = useRef<{ id: string | null; time: number }>({ id: null, time: 0 });
 
@@ -427,8 +428,41 @@ export default function BuildABotPage({ onBack }: BuildABotPageProps) {
           </div>
         </div>
 
-        {/* Reset */}
-        <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px solid #f3f4f6' }}>
+        {/* Save & Reset */}
+        <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Save button */}
+          <button
+            onClick={() => {
+              localStorage.setItem('savedBot', JSON.stringify(elements));
+              setSaveFlash(true);
+              setTimeout(() => setSaveFlash(false), 1800);
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '13px',
+              background: saveFlash
+                ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+                : 'linear-gradient(135deg,#43e97b,#38f9d7,#4facfe)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 12,
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              boxShadow: saveFlash
+                ? '0 4px 12px rgba(34,197,94,0.5)'
+                : '0 4px 12px rgba(67,233,123,0.4)',
+              transition: 'background 0.3s, box-shadow 0.3s',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {saveFlash ? '✓ Saved to Profile!' : '💾 Save Bot to Profile'}
+          </button>
+
           <button onClick={() => { setElements(INITIAL_ELEMENTS); setSelectedId(null); setPendingMergeId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: '#1f2937', color: 'white', border: 'none', borderRadius: 12, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
             ↺ Reset Bot
           </button>

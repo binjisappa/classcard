@@ -201,13 +201,18 @@ const CONTAINER_H = 293;
 
 const STICKER_MAP: Record<string, string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
 
-function renderBotEl(el: BotEl & { _bodyBg?: string }): React.ReactNode {
+interface BotElSpecial { isRainbow?: boolean; isBlackChrome?: boolean; isGold?: boolean; isSilver?: boolean; sheenClass?: string; sheenColor?: string; }
+
+function renderBotEl(el: BotEl & { _bodyBg?: string }, special?: BotElSpecial): React.ReactNode {
   const isGroup   = el.type === 'group';
   const isFace    = el.type === 'face';
   const isChest   = el.type === 'chest';
   const isScreen  = isFace || isChest;
   const isCircle  = el.type === 'circle';
   const isSticker = ['apple','smiley','heart','thumbsup','lips'].includes(el.type);
+  const isSpecial = !!(special && (special.isRainbow || special.isBlackChrome || special.isGold || special.isSilver));
+  const addRainbowBg = !!(special?.isRainbow && !isScreen && !isSticker && !isGroup);
+  const addBlackChromeBg = !!(special?.isBlackChrome && !isScreen && !isSticker && !isGroup);
 
   const containerStyle: React.CSSProperties = {
     position: 'absolute',
@@ -217,15 +222,28 @@ function renderBotEl(el: BotEl & { _bodyBg?: string }): React.ReactNode {
     height: isGroup ? (el.baseH ?? el.h) : el.h,
     transform: `translate(-50%,-50%) rotate(${el.rotation}deg) scale(${isGroup ? (el.scale ?? 1) : 1}) scaleX(${el.flipX ? -1 : 1}) scaleY(${el.flipY ? -1 : 1})`,
     borderRadius: isCircle ? '50%' : (typeof el.rx === 'number' ? el.rx : 0),
-    background: el._bodyBg || undefined,
-    backgroundColor: el._bodyBg ? undefined : ((isGroup || isSticker) ? 'transparent' : el.color),
+    background: (!isScreen && el._bodyBg) ? el._bodyBg : undefined,
+    backgroundSize: addRainbowBg ? '300% 300%' : undefined,
+    backgroundColor: (el._bodyBg && !isScreen) ? undefined : ((isGroup || isSticker) ? 'transparent' : el.color),
     boxShadow: isScreen
       ? 'inset 0 0 14px rgba(0,0,0,0.85)'
       : (!isGroup && !isSticker)
         ? 'inset 6px 6px 12px rgba(255,255,255,0.65), inset -6px -6px 12px rgba(0,0,0,0.06), 8px 8px 16px rgba(0,0,0,0.08)'
         : undefined,
-    overflow: isScreen ? 'hidden' : 'visible',
+    overflow: (isScreen || isSpecial) ? 'hidden' : 'visible',
     zIndex: isScreen ? 2 : 1,
+  };
+
+  const elClass = addRainbowBg ? 'rainbow-bg' : addBlackChromeBg ? 'bg-black-chrome' : '';
+
+  // Per-element sheen strip (only for non-screen, non-sticker parts)
+  const SheenStrip = () => {
+    if (!isSpecial || isScreen || isSticker || isGroup || !special?.sheenColor) return null;
+    return (
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 'inherit', pointerEvents: 'none', zIndex: 3 }}>
+        <div className={special.sheenClass} style={{ position: 'absolute', top: '-50%', left: '-75%', width: '60%', height: '200%', background: special.sheenColor, transform: 'skewX(-15deg)' }} />
+      </div>
+    );
   };
 
   const renderScreenContent = (type: string, w: number, h: number) => {
@@ -276,7 +294,8 @@ function renderBotEl(el: BotEl & { _bodyBg?: string }): React.ReactNode {
   };
 
   return (
-    <div key={el.id} style={containerStyle}>
+    <div key={el.id} className={elClass} style={containerStyle}>
+      <SheenStrip />
       {isGroup   && (el.children ?? []).map((c, ci) => renderChildEl(c, ci))}
       {isSticker && <span style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize: el.w * 0.7, lineHeight:1 }}>{STICKER_MAP[el.type]}</span>}
       {isScreen  && renderScreenContent(el.type, el.w, el.h)}
@@ -371,7 +390,18 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
 
   const isSpecialBot  = isGold || isSilver || isRainbow || isBlackChrome;
   const sheenClass    = isRainbow ? 'sheen-chrome' : isBlackChrome ? 'sheen-black-chrome' : isGold ? 'sheen-gold' : 'sheen-silver';
+  const sheenColor    = isRainbow
+    ? 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.6) 50%,transparent 70%)'
+    : isBlackChrome
+      ? 'linear-gradient(105deg,transparent 25%,rgba(180,140,255,0.5) 45%,rgba(255,255,255,0.35) 50%,rgba(140,100,255,0.4) 55%,transparent 75%)'
+      : isGold
+        ? 'linear-gradient(105deg,transparent 30%,rgba(255,250,200,0.65) 50%,transparent 70%)'
+        : 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.6) 50%,transparent 70%)';
   const botAnimClass  = isRainbow ? ' bot-rainbow' : isBlackChrome ? ' bg-black-chrome' : isGold ? ' bot-gold' : isSilver ? ' bot-silver' : '';
+
+  const special: BotElSpecial | undefined = isSpecialBot
+    ? { isRainbow, isBlackChrome, isGold, isSilver, sheenClass, sheenColor }
+    : undefined;
 
   return (
     <div style={{ position: 'relative', width: CONTAINER_W, flexShrink: 0 }}>
@@ -426,26 +456,8 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
                 };
                 return <div key={el.id} style={containerStyle}>{renderFaceContent(el)}</div>;
               }
-              return renderBotEl(el);
-            })}
-          </div>
-          {/* Sheen overlay — sweeps across the entire bot for special themes */}
-          {isSpecialBot && (
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 8, pointerEvents: 'none', zIndex: 10 }}>
-              <div className={sheenClass} style={{
-                position: 'absolute', top: '-50%', left: '-75%',
-                width: '55%', height: '200%',
-                background: isRainbow
-                  ? 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.5) 50%,transparent 70%)'
-                  : isBlackChrome
-                    ? 'linear-gradient(105deg,transparent 25%,rgba(180,140,255,0.5) 45%,rgba(255,255,255,0.35) 50%,rgba(140,100,255,0.4) 55%,transparent 75%)'
-                    : isGold
-                      ? 'linear-gradient(105deg,transparent 30%,rgba(255,250,200,0.65) 50%,transparent 70%)'
-                      : 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.6) 50%,transparent 70%)',
-                transform: 'skewX(-15deg)',
-              }} />
-            </div>
-          )}
+              return renderBotEl(el, special);
+            })}\n          </div>
         </div>
       </div>
     </div>

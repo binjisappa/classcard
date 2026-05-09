@@ -164,13 +164,36 @@ interface BotEl {
   baseW?: number; baseH?: number; children?: BotEl[]; flipX?: boolean; flipY?: boolean;
 }
 
-// The BuildABot canvas is 800×850. The bot content occupies roughly:
-// y: 45 (top of antenna ball) → 760 (bottom of legs)  = 715px tall
-// x: 55 (left arm edge) → 505 (right arm edge)         = 450px wide
-// We scale to match the default RobotAvatar height (~293px).
-const BAB_SCALE = 293 / 715;          // ≈ 0.41
-const BAB_VIEWPORT_W = Math.round(450 * BAB_SCALE);  // ≈ 184px
-const BAB_VIEWPORT_H = Math.round(715 * BAB_SCALE);  // ≈ 293px
+// Compute the bounding box of all bot elements so we can fit them perfectly
+// into the container without clipping. Called once per render with the saved elements.
+function getBotBounds(elements: BotEl[]) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const visit = (el: BotEl) => {
+    if (el.type === 'group' && el.children) {
+      el.children.forEach(c => {
+        // children are relative to group center; convert to absolute
+        const absCx = el.cx + c.cx;
+        const absCy = el.cy + c.cy;
+        const hw = (c.w * (el.scale ?? 1)) / 2;
+        const hh = (c.h * (el.scale ?? 1)) / 2;
+        minX = Math.min(minX, absCx - hw); maxX = Math.max(maxX, absCx + hw);
+        minY = Math.min(minY, absCy - hh); maxY = Math.max(maxY, absCy + hh);
+      });
+    } else {
+      minX = Math.min(minX, el.cx - el.w / 2); maxX = Math.max(maxX, el.cx + el.w / 2);
+      minY = Math.min(minY, el.cy - el.h / 2); maxY = Math.max(maxY, el.cy + el.h / 2);
+    }
+  };
+  elements.forEach(visit);
+  // Add a small padding so shadows/glows aren't clipped
+  const PAD = 12;
+  return { minX: minX - PAD, minY: minY - PAD, maxX: maxX + PAD, maxY: maxY + PAD,
+           w: maxX - minX + PAD * 2, h: maxY - minY + PAD * 2 };
+}
+
+// Container dimensions — match the default RobotAvatar's display area
+const CONTAINER_W = 184;
+const CONTAINER_H = 293;
 
 
 const STICKER_MAP: Record<string, string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
@@ -278,7 +301,14 @@ function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[
 
   if (!botElements) return null;
 
-  // Inject the pixel face into the face-screen element for live display
+  // Compute the actual bounding box of this specific bot
+  const bounds = getBotBounds(botElements);
+  // Scale so the bot fills the container while preserving aspect ratio (fit, not fill)
+  const scale = Math.min(CONTAINER_W / bounds.w, CONTAINER_H / bounds.h);
+  const displayW = bounds.w * scale;
+  const displayH = bounds.h * scale;
+
+  // Inject pixel face data into face-screen element
   const elementsWithPixels = facePixels
     ? botElements.map(el => el.type === 'face' ? { ...el, _facePixels: facePixels, _palettes: faceColorPalettes } : el)
     : botElements;
@@ -307,7 +337,7 @@ function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[
   };
 
   return (
-    <div style={{ position: 'relative', width: BAB_VIEWPORT_W, flexShrink: 0 }}>
+    <div style={{ position: 'relative', width: CONTAINER_W, flexShrink: 0 }}>
       <style>{`
         @keyframes savedBotBounce {
           0%,100% { transform: translateY(0); }
@@ -315,23 +345,22 @@ function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[
         }
         .saved-bot-body { animation: savedBotBounce 3s ease-in-out infinite; }
       `}</style>
-      {/* Outer clip to the viewport size */}
-      <div style={{ width: BAB_VIEWPORT_W, height: BAB_VIEWPORT_H, overflow: 'hidden', position: 'relative' }}>
-        {/* Bounce wrapper — bounces the scaled canvas */}
-        <div className="saved-bot-body" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-          {/* Scale + crop: the full 800×850 canvas scaled down, then offset to crop to the bot */}
+      {/* Outer container — no overflow:hidden so nothing gets clipped */}
+      <div style={{ width: CONTAINER_W, height: CONTAINER_H, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="saved-bot-body" style={{ position: 'relative', width: displayW, height: displayH }}>
+          {/* The full 800×850 canvas, scaled and offset so the bot's bounding box
+              aligns with the top-left of our display area */}
           <div style={{
             position: 'absolute',
             width: 800,
             height: 850,
-            transform: `scale(${BAB_SCALE})`,
+            transform: `scale(${scale})`,
             transformOrigin: 'top left',
-            // Offset to crop: shift left/up by the pre-scaled origin so only the bot is visible
-            left: -Math.round(55 * BAB_SCALE),   // shift left: removes left padding
-            top:  -Math.round(45 * BAB_SCALE),   // shift up: removes top antenna padding
+            // Shift so bounds.minX/minY lands at 0,0 in display space
+            left: -bounds.minX * scale,
+            top:  -bounds.minY * scale,
           }}>
             {elementsWithPixels.map((el: any) => {
-              // For face elements with pixel data, render a special version
               if (el.type === 'face') {
                 const containerStyle: React.CSSProperties = {
                   position: 'absolute',

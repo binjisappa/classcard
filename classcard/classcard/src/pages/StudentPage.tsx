@@ -372,7 +372,7 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
   const isBlackChrome = !!(robotColor as any).blackChrome;
   const isSpecialBot  = isGold || isSilver || isChromatic || isBlackChrome;
   const sheenClass    = isChromatic ? 'sheen-chrome' : isBlackChrome ? 'sheen-black-chrome' : isGold ? 'sheen-gold' : 'sheen-silver';
-  const botAnimClass  = isChromatic ? ' bg-chrome' : isBlackChrome ? ' bg-black-chrome' : isGold ? ' bg-gold' : isSilver ? ' bg-silver' : '';
+  const botAnimClass  = isChromatic ? ' bg-chrome' : isBlackChrome ? ' bg-black-chrome' : isGold ? ' bot-gold' : isSilver ? ' bot-silver' : '';
 
   return (
     <div style={{ position: 'relative', width: CONTAINER_W, flexShrink: 0 }}>
@@ -383,8 +383,8 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
         @keyframes sheenBCSweep    { 0% { left:-75%; } 100% { left:130%; } }
         @keyframes chromeHueBg     { 0% { filter:hue-rotate(0deg) brightness(1.05); } 50% { filter:hue-rotate(180deg) brightness(1.2); } 100% { filter:hue-rotate(360deg) brightness(1.05); } }
         @keyframes blackChromeBg   { 0%,100% { filter:hue-rotate(0deg) brightness(1) saturate(1.8); } 50% { filter:hue-rotate(60deg) brightness(1.15) saturate(2.2); } }
-        @keyframes goldBg          { 0%,100% { filter:brightness(1) saturate(1); } 50% { filter:brightness(1.15) saturate(1.3); } }
-        @keyframes silverBg        { 0%,100% { filter:brightness(1) saturate(0.9); } 50% { filter:brightness(1.2) saturate(1.1); } }
+        @keyframes goldPulse       { 0%,100% { filter:brightness(1) saturate(1); } 50% { filter:brightness(1.15) saturate(1.3); } }
+        @keyframes silverPulse     { 0%,100% { filter:brightness(1) saturate(0.9); } 50% { filter:brightness(1.2) saturate(1.1); } }
         .saved-bot-body      { animation: savedBotBounce 3s ease-in-out infinite; }
         .sheen-gold          { animation: sheenSweep 2.4s ease-in-out infinite; }
         .sheen-silver        { animation: sheenSweepSlow 3s ease-in-out infinite; }
@@ -392,8 +392,8 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
         .sheen-black-chrome  { animation: sheenBCSweep 2s ease-in-out infinite; }
         .bg-chrome           { animation: chromeHueBg 4s linear infinite; }
         .bg-black-chrome     { animation: blackChromeBg 5s ease-in-out infinite; }
-        .bg-gold             { animation: goldBg 2.4s ease-in-out infinite; }
-        .bg-silver           { animation: silverBg 3s ease-in-out infinite; }
+        .bot-gold            { animation: savedBotBounce 3s ease-in-out infinite, goldPulse 2.4s ease-in-out infinite; }
+        .bot-silver          { animation: savedBotBounce 3s ease-in-out infinite, silverPulse 3s ease-in-out infinite; }
       `}</style>
       {/* Outer container — no overflow:hidden so nothing gets clipped */}
       <div style={{ width: CONTAINER_W, height: CONTAINER_H, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -468,9 +468,11 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
     : `linear-gradient(145deg,${light},${mid})`;
   const palettes = faceColorPalettes || FACE_COLOR_PALETTES.slice(0, 1);
 
-  // bgClass: applied to each background layer div individually so the filter
-  // never touches screens or pixel content
-  const bgAnimClass = isChromatic ? ' bg-chrome' : isBlackChrome ? ' bg-black-chrome' : isGold ? ' bg-gold' : isSilver ? ' bg-silver' : '';
+  // bgClass applied to each background layer div — only for hue-rotating specials
+  // (keeps filter away from screens which have isolation:isolate as backup)
+  const bgAnimClass = isChromatic ? ' bg-chrome' : isBlackChrome ? ' bg-black-chrome' : '';
+  // bodyAnimClass on the whole wrapper — safe for gold/silver (brightness/saturate don't ruin dark screens)
+  const bodyAnimClass = isGold ? ' bot-gold' : isSilver ? ' bot-silver' : '';
 
   // Sheen overlay: sweeping highlight band
   const Sheen = ({ rounded = 8 }: { rounded?: number }) => {
@@ -505,9 +507,9 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
         @keyframes sheenSweepSlow  { 0% { left:-75%; } 100% { left:130%; } }
         @keyframes sheenBCSweep    { 0% { left:-75%; } 100% { left:130%; } }
         @keyframes chromeHueBg     { 0% { filter:hue-rotate(0deg) brightness(1.05); } 50% { filter:hue-rotate(180deg) brightness(1.2); } 100% { filter:hue-rotate(360deg) brightness(1.05); } }
-        @keyframes blackChromeBg   { 0% { filter:hue-rotate(0deg) brightness(1) saturate(1.8); } 50% { filter:hue-rotate(60deg) brightness(1.15) saturate(2.2); } 100% { filter:hue-rotate(0deg) brightness(1) saturate(1.8); } }
-        @keyframes goldBg          { 0%,100% { filter:brightness(1) saturate(1); } 50% { filter:brightness(1.15) saturate(1.3); } }
-        @keyframes silverBg        { 0%,100% { filter:brightness(1) saturate(0.9); } 50% { filter:brightness(1.2) saturate(1.1); } }
+        @keyframes blackChromeBg   { 0%,100% { filter:hue-rotate(0deg) brightness(1) saturate(1.8); } 50% { filter:hue-rotate(60deg) brightness(1.15) saturate(2.2); } }
+        @keyframes goldPulse       { 0%,100% { filter:brightness(1) saturate(1); } 50% { filter:brightness(1.15) saturate(1.3); } }
+        @keyframes silverPulse     { 0%,100% { filter:brightness(1) saturate(0.9); } 50% { filter:brightness(1.2) saturate(1.1); } }
         .robot-body          { animation: robotBounce 3s ease-in-out infinite; }
         .robot-eye           { animation: eyeBlink 4s ease-in-out infinite; }
         .sheen-gold          { animation: sheenSweep 2.4s ease-in-out infinite; }
@@ -516,11 +518,11 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
         .sheen-black-chrome  { animation: sheenBCSweep 2s ease-in-out infinite; }
         .bg-chrome           { animation: chromeHueBg 4s linear infinite; }
         .bg-black-chrome     { animation: blackChromeBg 5s ease-in-out infinite; }
-        .bg-gold             { animation: goldBg 2.4s ease-in-out infinite; }
-        .bg-silver           { animation: silverBg 3s ease-in-out infinite; }
+        .bot-gold            { animation: robotBounce 3s ease-in-out infinite, goldPulse 2.4s ease-in-out infinite; }
+        .bot-silver          { animation: robotBounce 3s ease-in-out infinite, silverPulse 3s ease-in-out infinite; }
       `}</style>
 
-      <div className="robot-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <div className={`robot-body${bodyAnimClass}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
         {/* Antenna */}
         <div style={{ width: 3, height: 22, background: isChromatic ? bodyBg : `linear-gradient(180deg,${mid},${dark})`, borderRadius: 4, marginBottom: -4, transition: 'background 0.6s ease', position: 'relative', overflow: 'hidden' }}>
           <Sheen rounded={4} />

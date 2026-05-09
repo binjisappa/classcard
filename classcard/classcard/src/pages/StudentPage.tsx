@@ -171,8 +171,7 @@ interface BotEl {
 const BAB_SCALE = 293 / 715;          // ≈ 0.41
 const BAB_VIEWPORT_W = Math.round(450 * BAB_SCALE);  // ≈ 184px
 const BAB_VIEWPORT_H = Math.round(715 * BAB_SCALE);  // ≈ 293px
-const BAB_OFFSET_X   = Math.round(55  * BAB_SCALE);  // left crop offset in display px
-const BAB_OFFSET_Y   = Math.round(45  * BAB_SCALE);  // top  crop offset in display px
+
 
 const STICKER_MAP: Record<string, string> = { apple:'🍎', smiley:'🙂', heart:'❤️', thumbsup:'👍', lips:'👄' };
 
@@ -334,7 +333,6 @@ function SavedBotAvatar({ facePixels, faceColorPalettes }: { facePixels: string[
             {elementsWithPixels.map((el: any) => {
               // For face elements with pixel data, render a special version
               if (el.type === 'face') {
-                const isScreen = true;
                 const containerStyle: React.CSSProperties = {
                   position: 'absolute',
                   left: el.cx, top: el.cy,

@@ -366,6 +366,12 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
     );
   };
 
+  const isGold   = robotColor.label === '✨ Gold';
+  const isSilver = robotColor.label === '✨ Silver';
+  const isSpecialBot = isGold || isSilver || isChromatic;
+  const sheenClass = isChromatic ? 'sheen-chrome' : isGold ? 'sheen-gold' : 'sheen-silver';
+  const botAnimClass = isGold ? ' bot-gold' : isSilver ? ' bot-silver' : isChromatic ? ' bot-chrome' : '';
+
   return (
     <div style={{ position: 'relative', width: CONTAINER_W, flexShrink: 0 }}>
       <style>{`
@@ -373,11 +379,22 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
           0%,100% { transform: translateY(0); }
           50%      { transform: translateY(-6px); }
         }
-        .saved-bot-body { animation: savedBotBounce 3s ease-in-out infinite; }
+        @keyframes sheenSweep     { 0% { left:-75%; } 100% { left:130%; } }
+        @keyframes sheenSweepSlow { 0% { left:-75%; } 100% { left:130%; } }
+        @keyframes chromeHue  { 0% { filter:hue-rotate(0deg) brightness(1.05); } 50% { filter:hue-rotate(180deg) brightness(1.2); } 100% { filter:hue-rotate(360deg) brightness(1.05); } }
+        @keyframes goldPulse  { 0%,100% { filter:brightness(1) saturate(1); } 50% { filter:brightness(1.15) saturate(1.3); } }
+        @keyframes silverPulse{ 0%,100% { filter:brightness(1) saturate(0.9); } 50% { filter:brightness(1.2) saturate(1.1); } }
+        .saved-bot-body  { animation: savedBotBounce 3s ease-in-out infinite; }
+        .sheen-gold      { animation: sheenSweep 2.4s ease-in-out infinite; }
+        .sheen-silver    { animation: sheenSweepSlow 3s ease-in-out infinite; }
+        .sheen-chrome    { animation: sheenSweep 1.6s ease-in-out infinite; }
+        .bot-gold        { animation: goldPulse 2.4s ease-in-out infinite; }
+        .bot-silver      { animation: silverPulse 3s ease-in-out infinite; }
+        .bot-chrome      { animation: chromeHue 4s linear infinite; }
       `}</style>
       {/* Outer container — no overflow:hidden so nothing gets clipped */}
       <div style={{ width: CONTAINER_W, height: CONTAINER_H, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="saved-bot-body" style={{ position: 'relative', width: displayW, height: displayH }}>
+        <div className={`saved-bot-body${botAnimClass}`} style={{ position: 'relative', width: displayW, height: displayH }}>
           {/* The full 800×850 canvas, scaled and offset so the bot's bounding box
               aligns with the top-left of our display area */}
           <div style={{
@@ -409,6 +426,21 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
               return renderBotEl(el);
             })}
           </div>
+          {/* Sheen overlay — sweeps across the entire bot for special themes */}
+          {isSpecialBot && (
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 8, pointerEvents: 'none', zIndex: 10 }}>
+              <div className={sheenClass} style={{
+                position: 'absolute', top: '-50%', left: '-75%',
+                width: '55%', height: '200%',
+                background: isChromatic
+                  ? 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.5) 50%,transparent 70%)'
+                  : isGold
+                    ? 'linear-gradient(105deg,transparent 30%,rgba(255,250,200,0.65) 50%,transparent 70%)'
+                    : 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.6) 50%,transparent 70%)',
+                transform: 'skewX(-15deg)',
+              }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -422,10 +454,36 @@ function SavedBotAvatar({ facePixels, faceColorPalettes, robotColor }: { facePix
 function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }: { level: number; xp: number; xpMax: number; color: ColorTheme; facePixels: string[] | null; faceColorPalettes?: typeof FACE_COLOR_PALETTES }) {
   const { light, mid, dark, glow, label } = color;
   const isChromatic = !!(color as any).chromatic;
+  const isGold   = color.label === '✨ Gold';
+  const isSilver = color.label === '✨ Silver';
+  const isSpecial = isGold || isSilver || isChromatic;
   const bodyBg = (color as any).gradient
     ? (color as any).gradient
     : `linear-gradient(145deg,${light},${mid})`;
   const palettes = faceColorPalettes || FACE_COLOR_PALETTES.slice(0, 1);
+
+  // Sheen overlay: a bright diagonal band that sweeps across the part
+  const Sheen = ({ rounded = 8 }: { rounded?: number }) => {
+    if (!isSpecial) return null;
+    return (
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: rounded, overflow: 'hidden',
+        pointerEvents: 'none', zIndex: 3,
+      }}>
+        <div className={isChromatic ? 'sheen-chrome' : isGold ? 'sheen-gold' : 'sheen-silver'} style={{
+          position: 'absolute', top: '-50%', left: '-75%',
+          width: '60%', height: '200%',
+          background: isChromatic
+            ? 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.55) 50%,transparent 70%)'
+            : isGold
+              ? 'linear-gradient(105deg,transparent 30%,rgba(255,250,200,0.7) 50%,transparent 70%)'
+              : 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.65) 50%,transparent 70%)',
+          transform: 'skewX(-15deg)',
+        }} />
+      </div>
+    );
+  };
+
   return (
     <div style={{ position: 'relative', width: 180, flexShrink: 0 }}>
       <style>{`
@@ -437,19 +495,47 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
           0%,90%,100% { transform: scaleY(1); }
           95%          { transform: scaleY(0.08); }
         }
+        @keyframes sheenSweep {
+          0%   { left: -75%; }
+          100% { left: 130%; }
+        }
+        @keyframes sheenSweepSlow {
+          0%   { left: -75%; }
+          100% { left: 130%; }
+        }
+        @keyframes chromeHue {
+          0%   { filter: hue-rotate(0deg) brightness(1.05); }
+          50%  { filter: hue-rotate(180deg) brightness(1.2); }
+          100% { filter: hue-rotate(360deg) brightness(1.05); }
+        }
+        @keyframes goldPulse {
+          0%,100% { filter: brightness(1) saturate(1); }
+          50%      { filter: brightness(1.15) saturate(1.3); }
+        }
+        @keyframes silverPulse {
+          0%,100% { filter: brightness(1) saturate(0.9); }
+          50%      { filter: brightness(1.2) saturate(1.1); }
+        }
         .robot-body { animation: robotBounce 3s ease-in-out infinite; }
         .robot-eye  { animation: eyeBlink 4s ease-in-out infinite; }
+        .sheen-gold   { animation: sheenSweep 2.4s ease-in-out infinite; }
+        .sheen-silver { animation: sheenSweepSlow 3s ease-in-out infinite; }
+        .sheen-chrome { animation: sheenSweep 1.6s ease-in-out infinite; }
+        .bot-gold   { animation: goldPulse 2.4s ease-in-out infinite; }
+        .bot-silver { animation: silverPulse 3s ease-in-out infinite; }
+        .bot-chrome { animation: chromeHue 4s linear infinite; }
       `}</style>
 
-      <div className="robot-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <div className={`robot-body${isGold ? ' bot-gold' : isSilver ? ' bot-silver' : isChromatic ? ' bot-chrome' : ''}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
         {/* Antenna */}
         <div style={{ width: 3, height: 22, background: isChromatic ? bodyBg : `linear-gradient(180deg,${mid},${dark})`, borderRadius: 4, marginBottom: -4, transition: 'background 0.6s ease' }} />
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: dark, boxShadow: `0 0 10px ${dark}`, transition: 'background 0.6s ease, box-shadow 0.6s ease' }} />
 
         {/* Head */}
         <div style={{ width: 120, height: 90, background: bodyBg, borderRadius: 24, position: 'relative', boxShadow: `0 8px 24px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
+          <Sheen rounded={24} />
           {/* Face screen */}
-          <div style={{ width: 80, height: 52, background: '#0d1117', borderRadius: 12, overflow: 'hidden', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 80, height: 52, background: '#0d1117', borderRadius: 12, overflow: 'hidden', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 4 }}>
             {facePixels ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: 0, width: 70, height: 44 }}>
                 {facePixels.map((c, i) => {
@@ -468,21 +554,28 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
           </div>
           {/* Ear nubs */}
           {[-1, 1].map(s => (
-            <div key={s} style={{ position: 'absolute', top: '50%', [s === -1 ? 'left' : 'right']: -8, transform: 'translateY(-50%)', width: 10, height: 28, background: `linear-gradient(145deg,${mid},${dark})`, borderRadius: 6, transition: 'background 0.6s ease' }} />
+            <div key={s} style={{ position: 'absolute', top: '50%', [s === -1 ? 'left' : 'right']: -8, transform: 'translateY(-50%)', width: 10, height: 28, background: `linear-gradient(145deg,${mid},${dark})`, borderRadius: 6, transition: 'background 0.6s ease', overflow: 'hidden' }}>
+              <Sheen rounded={6} />
+            </div>
           ))}
         </div>
 
         {/* Neck */}
-        <div style={{ width: 28, height: 12, background: isChromatic ? bodyBg : `linear-gradient(180deg,${mid},${dark})`, borderRadius: 6, transition: 'background 0.6s ease' }} />
+        <div style={{ width: 28, height: 12, background: isChromatic ? bodyBg : `linear-gradient(180deg,${mid},${dark})`, borderRadius: 6, transition: 'background 0.6s ease', position: 'relative', overflow: 'hidden' }}>
+          <Sheen rounded={6} />
+        </div>
 
         {/* Body */}
         <div style={{ width: 130, height: 110, background: bodyBg, borderRadius: 28, position: 'relative', boxShadow: `0 10px 30px ${glow}, inset 0 2px 4px rgba(255,255,255,0.6)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background 0.6s ease, box-shadow 0.6s ease' }}>
+          <Sheen rounded={28} />
           {/* Arm nubs */}
           {[-1, 1].map(s => (
-            <div key={s} style={{ position: 'absolute', top: 20, [s === -1 ? 'left' : 'right']: -14, width: 18, height: 60, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: 12, transition: 'background 0.6s ease' }} />
+            <div key={s} style={{ position: 'absolute', top: 20, [s === -1 ? 'left' : 'right']: -14, width: 18, height: 60, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: 12, transition: 'background 0.6s ease', overflow: 'hidden' }}>
+              <Sheen rounded={12} />
+            </div>
           ))}
           {/* Chest screen */}
-          <div style={{ width: 88, height: 58, background: '#0d1117', borderRadius: 14, boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <div style={{ width: 88, height: 58, background: '#0d1117', borderRadius: 14, boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, position: 'relative', zIndex: 4 }}>
             <span style={{ color: '#a8e6ff', fontSize: '0.75rem', fontWeight: 800, letterSpacing: 1 }}>LVL {level}</span>
             <span style={{ color: 'rgba(168,230,255,0.6)', fontSize: '0.6rem' }}>{xp} XP</span>
             <div style={{ width: 60, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden' }}>
@@ -494,7 +587,9 @@ function RobotAvatar({ level, xp, xpMax, color, facePixels, faceColorPalettes }:
         {/* Legs */}
         <div style={{ display: 'flex', gap: 16 }}>
           {[0, 1].map(i => (
-            <div key={i} style={{ width: 32, height: 38, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: '12px 12px 16px 16px', boxShadow: `0 4px 12px ${glow}`, transition: 'background 0.6s ease' }} />
+            <div key={i} style={{ width: 32, height: 38, background: `linear-gradient(180deg,${mid},${dark})`, borderRadius: '12px 12px 16px 16px', boxShadow: `0 4px 12px ${glow}`, transition: 'background 0.6s ease', position: 'relative', overflow: 'hidden' }}>
+              <Sheen rounded={12} />
+            </div>
           ))}
         </div>
       </div>

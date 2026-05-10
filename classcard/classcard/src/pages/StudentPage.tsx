@@ -968,9 +968,37 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
 /* ─────────────────────────────────────────────
    Card item in carousel
 ───────────────────────────────────────────── */
-function CardItem({ card, onClick }: { card: Card; onClick: () => void }) {
+function CardItem({ card, onClick, index, total }: { 
+  card: Card; 
+  onClick: () => void;
+  index: number;
+  total: number;
+}) {
   const [hovered, setHovered] = useState(false);
   const stars = { common: 1, silver: 2, 'gold-rare': 3, prismatic: 4 }[card.rarity] ?? 1;
+
+  // Calculate arc positioning - cards fan out from center
+  const centerIndex = (total - 1) / 2;
+  const offsetFromCenter = index - centerIndex;
+  
+  // Rotation: cards angle outward from center (-15° to +15°)
+  const baseRotation = offsetFromCenter * (total > 8 ? 3 : 5);
+  const rotation = hovered ? 0 : baseRotation;
+  
+  // Horizontal offset: spread cards in arc
+  const horizontalSpread = total > 10 ? 45 : total > 6 ? 55 : 70;
+  const translateX = offsetFromCenter * horizontalSpread;
+  
+  // Vertical offset: create arc curve (cards in middle are higher)
+  const arcHeight = total > 10 ? 15 : total > 6 ? 20 : 25;
+  const translateY = hovered ? -60 : Math.abs(offsetFromCenter) * arcHeight;
+  
+  // Z-index: hovered card on top, center cards slightly above edges
+  const baseZIndex = 100 - Math.abs(offsetFromCenter);
+  const zIndex = hovered ? 1000 : baseZIndex;
+  
+  // Scale: hovered card gets bigger
+  const scale = hovered ? 1.25 : 1;
 
   return (
     <div
@@ -978,45 +1006,53 @@ function CardItem({ card, onClick }: { card: Card; onClick: () => void }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        flexShrink: 0,
-        width: 180,
-        borderRadius: 22,
-        padding: '0 0 14px',
+        position: 'absolute',
+        left: '50%',
+        bottom: 0,
+        width: 140,
+        borderRadius: 18,
+        padding: '0 0 12px',
         cursor: 'pointer',
-        transform: hovered ? 'translateY(-8px) scale(1.03)' : 'translateY(0) scale(1)',
-        transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+        transform: `
+          translateX(calc(-50% + ${translateX}px)) 
+          translateY(${translateY}px) 
+          rotate(${rotation}deg) 
+          scale(${scale})
+        `,
+        transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
         boxShadow: hovered
-          ? '0 16px 40px rgba(180,120,220,0.25)'
-          : '0 4px 16px rgba(180,120,220,0.12)',
+          ? '0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.5)'
+          : '0 6px 18px rgba(0, 0, 0, 0.2)',
+        zIndex,
         overflow: 'hidden',
         ...rarityCardStyle(card.rarity),
       }}
     >
       {/* Stars */}
-      <div style={{ padding: '10px 12px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.75rem', color: card.rarity === 'common' ? '#9090b0' : card.rarity === 'silver' ? '#7090a0' : card.rarity === 'gold-rare' ? '#c08000' : '#9040c0' }}>
+      <div style={{ padding: '8px 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.7rem', color: card.rarity === 'common' ? '#9090b0' : card.rarity === 'silver' ? '#7090a0' : card.rarity === 'gold-rare' ? '#c08000' : '#9040c0' }}>
           {RARITY_ICONS[card.rarity]}
         </span>
-        <span style={{ fontSize: '0.6rem', color: 'rgba(0,0,0,0.3)' }}>
+        <span style={{ fontSize: '0.55rem', color: 'rgba(0,0,0,0.3)' }}>
           {'★'.repeat(stars)}{'☆'.repeat(4 - stars)}
         </span>
       </div>
 
       {/* Image */}
-      <div style={{ width: '100%', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {card.image_url
           ? <img src={card.image_url} alt={card.card_name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-          : <div style={{ fontSize: '2.5rem', opacity: 0.3 }}>🃏</div>
+          : <div style={{ fontSize: '2.2rem', opacity: 0.3 }}>🃏</div>
         }
       </div>
 
       {/* Name */}
-      <div style={{ padding: '6px 12px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', color: '#3040a0', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ padding: '6px 10px 0', textAlign: 'center' }}>
+        <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.08em', color: '#3040a0', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {card.card_name}
         </div>
         {card.rarity === 'prismatic' && (
-          <div style={{ fontSize: '0.5rem', color: '#9040c0', marginTop: 2 }}>✦ PRISMATIC ✦</div>
+          <div style={{ fontSize: '0.48rem', color: '#9040c0', marginTop: 2 }}>✦ PRISMATIC ✦</div>
         )}
       </div>
     </div>
@@ -1028,36 +1064,93 @@ function CardItem({ card, onClick }: { card: Card; onClick: () => void }) {
 ───────────────────────────────────────────── */
 function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: Card) => void }) {
   const [page, setPage] = useState(0);
-  const perPage = 6;
-  const totalPages = Math.ceil(cards.length / perPage);
-  const visible = cards.slice(page * perPage, page * perPage + perPage);
+  const cardsPerPage = 12; // Show more cards in arc view
+  const totalPages = Math.ceil(cards.length / cardsPerPage);
+  const visible = cards.slice(page * cardsPerPage, page * cardsPerPage + cardsPerPage);
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.55)', borderRadius: 28, padding: '20px 24px', border: '1.5px solid rgba(255,255,255,0.85)', boxShadow: '0 4px 20px rgba(200,160,220,0.08)', backdropFilter: 'blur(8px)' }}>
+    <div style={{ 
+      background: 'rgba(255,255,255,0.55)', 
+      borderRadius: 28, 
+      padding: '20px 24px 24px', 
+      border: '1.5px solid rgba(255,255,255,0.85)', 
+      boxShadow: '0 4px 20px rgba(200,160,220,0.08)', 
+      backdropFilter: 'blur(8px)' 
+    }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ color: '#64b5f6', fontSize: '0.7rem' }}>✦</span>
-          <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.12em', color: '#5060a0', textTransform: 'uppercase' }}>Your Cards</span>
+          <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.12em', color: '#5060a0', textTransform: 'uppercase' }}>
+            Your Cards {cards.length > 0 && `(${cards.length})`}
+          </span>
         </div>
         {totalPages > 1 && (
-          <button
-            onClick={() => setPage(p => (p + 1) % totalPages)}
-            style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(100,120,220,0.1)', border: '1px solid rgba(100,120,220,0.2)', color: '#6070c0', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >▶</button>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              style={{ 
+                width: 28, 
+                height: 28, 
+                borderRadius: '50%', 
+                background: page === 0 ? 'rgba(100,120,220,0.05)' : 'rgba(100,120,220,0.1)', 
+                border: '1px solid rgba(100,120,220,0.2)', 
+                color: page === 0 ? '#c0c8e0' : '#6070c0', 
+                fontSize: '0.7rem', 
+                cursor: page === 0 ? 'not-allowed' : 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}
+            >◀</button>
+            <span style={{ fontSize: '0.65rem', color: '#8090c0', fontWeight: 700, minWidth: 40, textAlign: 'center' }}>
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              style={{ 
+                width: 28, 
+                height: 28, 
+                borderRadius: '50%', 
+                background: page === totalPages - 1 ? 'rgba(100,120,220,0.05)' : 'rgba(100,120,220,0.1)', 
+                border: '1px solid rgba(100,120,220,0.2)', 
+                color: page === totalPages - 1 ? '#c0c8e0' : '#6070c0', 
+                fontSize: '0.7rem', 
+                cursor: page === totalPages - 1 ? 'not-allowed' : 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}
+            >▶</button>
+          </div>
         )}
       </div>
 
-      {/* Cards row */}
+      {/* Card holder - arc display */}
       {cards.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#a0a8c8', fontSize: '0.85rem' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 12, opacity: 0.3 }}>🃏</div>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a0a8c8', fontSize: '0.85rem' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12, opacity: 0.3 }}>🃏</div>
           No cards yet — keep up the great work!
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 4 }}>
-          {visible.map(card => (
-            <CardItem key={card.id} card={card} onClick={() => onCardClick(card)} />
+        <div style={{ 
+          position: 'relative', 
+          height: visible.length > 10 ? 240 : visible.length > 6 ? 260 : 280,
+          minHeight: 200,
+          overflow: 'visible',
+          margin: '0 auto',
+          maxWidth: '100%',
+        }}>
+          {visible.map((card, index) => (
+            <CardItem 
+              key={card.id} 
+              card={card} 
+              onClick={() => onCardClick(card)}
+              index={index}
+              total={visible.length}
+            />
           ))}
         </div>
       )}
@@ -1069,10 +1162,18 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
             <button
               key={i}
               onClick={() => setPage(i)}
-              style={{ width: i === page ? 20 : 8, height: 8, borderRadius: 10, background: i === page ? 'linear-gradient(90deg,#f06292,#64b5f6)' : 'rgba(160,170,210,0.35)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }}
+              style={{ 
+                width: i === page ? 20 : 8, 
+                height: 8, 
+                borderRadius: 10, 
+                background: i === page ? 'linear-gradient(90deg,#f06292,#64b5f6)' : 'rgba(160,170,210,0.35)', 
+                border: 'none', 
+                cursor: 'pointer', 
+                transition: 'all 0.3s', 
+                padding: 0 
+              }}
             />
           ))}
-          <span style={{ color: '#a0a8c8', fontSize: '0.6rem', display: 'flex', alignItems: 'center', marginLeft: 4 }}>▶</span>
         </div>
       )}
     </div>

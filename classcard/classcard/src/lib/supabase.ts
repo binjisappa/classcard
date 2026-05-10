@@ -20,6 +20,8 @@ export type Student = {
   teacher_id: string;
   auth_user_id?: string;
   login_email?: string;
+  robot_color_index?: number;
+  face_pixels?: string;
   created_at: string;
 };
 
@@ -170,3 +172,42 @@ export type Card = {
   created_at: string;
   students?: { name: string };
 };
+
+// ── Robot Customization helpers ────────────────────────────────────────────
+
+/** Save student's robot color and face pixels to database */
+export async function saveStudentRobotSettings(
+  studentId: string,
+  colorIndex: number,
+  facePixels: string[] | null
+): Promise<void> {
+  const { error } = await sb
+    .from('students')
+    .update({
+      robot_color_index: colorIndex,
+      face_pixels: facePixels ? JSON.stringify(facePixels) : null,
+    })
+    .eq('id', studentId);
+  
+  if (error) throw error;
+}
+
+/** Load student's robot settings from database */
+export async function loadStudentRobotSettings(
+  studentId: string
+): Promise<{ colorIndex: number; facePixels: string[] | null } | null> {
+  const { data, error } = await sb
+    .from('students')
+    .select('robot_color_index, face_pixels')
+    .eq('id', studentId)
+    .maybeSingle();
+  
+  if (error) throw error;
+  if (!data) return null;
+  
+  return {
+    colorIndex: data.robot_color_index ?? 0,
+    facePixels: data.face_pixels ? JSON.parse(data.face_pixels) : null,
+  };
+}
+

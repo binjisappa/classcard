@@ -968,60 +968,59 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
 /* ─────────────────────────────────────────────
    Card item in carousel
 ───────────────────────────────────────────── */
-function CardItem({ card, onClick, index, total, containerWidth }: { 
+function CardItem({ card, onClick, index, total, fanAngle, radius, containerCx, containerBottom }: { 
   card: Card; 
   onClick: () => void;
   index: number;
   total: number;
-  containerWidth: number;
+  fanAngle: number;   // this card's angle in degrees from vertical (negative = left, positive = right)
+  radius: number;     // distance from pivot to card centre (px)
+  containerCx: number; // x of pivot in container coords
+  containerBottom: number; // y of pivot in container coords (below the container base)
 }) {
   const [hovered, setHovered] = useState(false);
   const stars = { common: 1, silver: 2, 'gold-rare': 3, prismatic: 4 }[card.rarity] ?? 1;
 
-  const CARD_WIDTH = 140;
-  const MARGIN = 16; // ~1cm each side
+  // ── True pivot-based fan geometry ────────────────────────────────────────
+  // The pivot sits below the visible container. Each card's centre lies on a
+  // circle of `radius` centred on the pivot. We compute the card's (x, y)
+  // position in container coords, then rotate it by fanAngle so its face
+  // always points away from the pivot — exactly like holding cards in a fan.
+  //
+  // angle=0 → card sits straight up at the top of the circle (centre of fan)
+  // angle<0 → card is left of centre,  angle>0 → right of centre
+  //
+  // In SVG/CSS coords, "up" is negative Y, so:
+  //   cardCx = pivotX + radius * sin(angle)
+  //   cardCy = pivotY - radius * cos(angle)   (pivotY is BELOW container base)
 
-  // ── Arc geometry ──────────────────────────────────────────────────────────
-  // We place every card at the same (x=center, y=bottom) anchor, then rotate
-  // it around a point FAR below the container (the arc's virtual centre).
-  // This gives a clean hand-of-cards fan with a shared pivot.
-  const usableWidth   = containerWidth - MARGIN * 2;
-  const centerIndex   = (total - 1) / 2;
-  const offsetNorm    = total > 1 ? (index - centerIndex) / centerIndex : 0; // -1 … +1
+  const angleRad = (fanAngle * Math.PI) / 180;
+  const CARD_WIDTH  = 140;
+  const CARD_HEIGHT = 190; // approximate rendered card height
 
-  // How wide the fan sweeps in degrees (total, so ±half each side)
-  const totalArcDeg   = total <= 3 ? 16 : total <= 6 ? 28 : total <= 9 ? 38 : 46;
-  const baseRotation  = total > 1 ? offsetNorm * (totalArcDeg / 2) : 0;
+  // Card centre position in container space
+  const cardCx = containerCx + radius * Math.sin(angleRad);
+  // pivot is `containerBottom` px below the bottom of the container,
+  // so pivotY in container coords = containerBottom (measured from top of container downward)
+  const pivotY = containerBottom;
+  const cardCy = pivotY - radius * Math.cos(angleRad);
 
-  // Horizontal: spread card anchors across the usable width
-  const posX = total === 1
-    ? containerWidth / 2
-    : MARGIN + (index / (total - 1)) * usableWidth;
+  // On hover: slide the card outward along its own spoke (away from pivot) by liftPx
+  const liftPx = 60;
+  const liftedCx = hovered ? containerCx + (radius + liftPx) * Math.sin(angleRad) : cardCx;
+  const liftedCy = hovered ? pivotY - (radius + liftPx) * Math.cos(angleRad)      : cardCy;
 
-  // Vertical arc drop: edges sink below centre using a parabola
-  const arcDrop = total <= 4 ? 22 : total <= 8 ? 32 : 42; // px max drop at edges
-  const translateY = offsetNorm * offsetNorm * arcDrop;     // 0 at centre, arcDrop at edges
+  // top-left corner so the card is centred on (liftedCx, liftedCy)
+  const left = liftedCx - CARD_WIDTH  / 2;
+  const top  = liftedCy - CARD_HEIGHT / 2;
 
-  // ── Z-index: strictly left-under-right, NEVER changes (no transition) ────
-  // We use inline style only — no CSS transition on z-index ever.
-  // Hovered card goes on top via a wrapper trick: we DON'T change z-index on
-  // hover at all — instead we lift it visually with translateY so the browser
-  // paint order (which follows DOM order, left-to-right) naturally keeps the
-  // right card above the left card at all times.
-  // But we DO want the hovered card clickable above siblings, so we use a
-  // pointer-events layer. For true visual lift above neighbours we accept that
-  // the hovered card will appear above its right neighbours only if we raise
-  // z-index — we raise it to total+1 (just above all peers) so it always wins,
-  // but we set the transition on z-index to 'step-start' so it snaps instantly.
-  const baseZIndex = index + 1; // strict left-under-right, never transitions
-
-  // ── Hover state ──────────────────────────────────────────────────────────
-  // On hover: straighten the card, lift it up, scale slightly.
-  // We keep the same posX anchor so the card lifts straight up in place.
-  const hoverLiftY   = -80; // px upward from its resting position
-  const finalRotation = hovered ? 0 : baseRotation;
-  const finalTranslateY = hovered ? translateY + hoverLiftY : translateY;
-  const scale         = hovered ? 1.18 : 1;
+  // ── Z-index: FIXED by index, NEVER changes ───────────────────────────────
+  // Right card (higher index) always paints above left card. We do not touch
+  // z-index on hover — the overlap order is permanent and transitions cannot
+  // interpolate it. The hovered card may briefly appear behind its right
+  // neighbours as it lifts, which is the correct real-world behaviour (you
+  // slide a card out from the fan without reordering the stack).
+  const zIndex = index + 1;
 
   return (
     <div
@@ -1030,22 +1029,21 @@ function CardItem({ card, onClick, index, total, containerWidth }: {
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
-        left: posX,
-        bottom: 0,
+        left,
+        top,
         width: CARD_WIDTH,
         borderRadius: 18,
         padding: '0 0 12px',
         cursor: 'pointer',
-        // translateX(-50%) centres the card on posX; Y and rotate handle arc
-        transform: `translateX(-50%) translateY(${finalTranslateY}px) rotate(${finalRotation}deg) scale(${scale})`,
-        // Smooth cubic: slow-start → fast → gentle settle. NO z-index in transition list.
-        transition: 'transform 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), box-shadow 0.3s ease',
+        // Rotation matches the fan angle so cards always face outward from pivot
+        transform: `rotate(${fanAngle}deg) scale(${hovered ? 1.12 : 1})`,
+        transformOrigin: 'center center',
+        // Only transform and box-shadow transition — z-index is never transitioned
+        transition: 'left 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), top 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), transform 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), box-shadow 0.3s ease',
         boxShadow: hovered
           ? '0 20px 50px rgba(0,0,0,0.32), 0 0 0 3px rgba(255,255,255,0.55)'
           : '0 6px 18px rgba(0,0,0,0.18)',
-        // z-index is set directly as a style prop (not transitioned) — React
-        // updates it synchronously on the next render, so it snaps immediately.
-        zIndex: hovered ? total + 10 : baseZIndex,
+        zIndex,
         overflow: 'hidden',
         ...rarityCardStyle(card.rarity),
       }}
@@ -1102,6 +1100,30 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
     setContainerWidth(el.getBoundingClientRect().width);
     return () => ro.disconnect();
   }, []);
+
+  // ── Fan geometry (computed once per render, shared across all CardItems) ──
+  // The pivot sits below the visible container. Radius controls how tight/wide
+  // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
+  const CONTAINER_HEIGHT = 280;
+  const CARD_HEIGHT      = 190;
+  const MARGIN           = 16; // ~1cm from each edge
+
+  // How far the pivot is below the bottom of the container
+  const pivotBelow = 420;
+  const radius     = pivotBelow + CONTAINER_HEIGHT; // distance from pivot to card centres
+
+  // Total fan angle: widens with more cards, capped so cards don't fly off-screen
+  const totalSpreadDeg = visible.length <= 1 ? 0
+    : Math.min(44, visible.length * (containerWidth > 500 ? 3.8 : 3.2));
+
+  // Each card's angle, evenly spaced, centred on 0
+  const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
+  const fanAngles = visible.map((_, i) => -totalSpreadDeg / 2 + i * angleStep);
+
+  // Pivot x = horizontal centre of the container
+  const containerCx     = containerWidth / 2;
+  // Pivot y in container coords = CONTAINER_HEIGHT + pivotBelow
+  const containerBottom = CONTAINER_HEIGHT + pivotBelow;
 
   return (
     <div style={{ 
@@ -1163,7 +1185,7 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
         )}
       </div>
 
-      {/* Card holder - arc display */}
+      {/* Card holder - true pivot fan display */}
       {cards.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a0a8c8', fontSize: '0.85rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 12, opacity: 0.3 }}>🃏</div>
@@ -1172,8 +1194,7 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
       ) : (
         <div ref={containerRef} style={{ 
           position: 'relative', 
-          height: 300,
-          minHeight: 220,
+          height: CONTAINER_HEIGHT,
           overflow: 'visible',
           margin: '0 auto',
           maxWidth: '100%',
@@ -1185,7 +1206,10 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
               onClick={() => onCardClick(card)}
               index={index}
               total={visible.length}
-              containerWidth={containerWidth}
+              fanAngle={fanAngles[index]}
+              radius={radius}
+              containerCx={containerCx}
+              containerBottom={containerBottom}
             />
           ))}
         </div>

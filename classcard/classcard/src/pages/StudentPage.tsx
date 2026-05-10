@@ -1103,15 +1103,18 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   // ── Fan geometry (computed once per render, shared across all CardItems) ──
   // The pivot sits below the visible container. Radius controls how tight/wide
   // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
-  const CONTAINER_HEIGHT = 280;
+  const CONTAINER_HEIGHT = 260;
 
-  // How far the pivot is below the bottom of the container
-  const pivotBelow = 420;
+  // How far the pivot is below the bottom of the container.
+  // Smaller = tighter arc (cards sit lower, more of the card is below the curve).
+  // Larger = flatter arc (cards float higher).
+  const pivotBelow = 280;
   const radius     = pivotBelow + CONTAINER_HEIGHT; // distance from pivot to card centres
 
-  // Total fan angle: widens with more cards, capped so cards don't fly off-screen
+  // Total fan angle: wide enough to span ~edge to edge of the container.
+  // The leftmost card starts near the left margin, rightmost near the right.
   const totalSpreadDeg = visible.length <= 1 ? 0
-    : Math.min(44, visible.length * (containerWidth > 500 ? 3.8 : 3.2));
+    : Math.min(58, visible.length * (containerWidth > 500 ? 5.2 : 4.4));
 
   // Each card's angle, evenly spaced, centred on 0
   const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;

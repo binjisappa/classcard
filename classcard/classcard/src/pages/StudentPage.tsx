@@ -968,35 +968,42 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
 /* ─────────────────────────────────────────────
    Card item in carousel
 ───────────────────────────────────────────── */
-function CardItem({ card, onClick, index, total }: { 
+function CardItem({ card, onClick, index, total, containerWidth }: { 
   card: Card; 
   onClick: () => void;
   index: number;
   total: number;
+  containerWidth: number;
 }) {
   const [hovered, setHovered] = useState(false);
   const stars = { common: 1, silver: 2, 'gold-rare': 3, prismatic: 4 }[card.rarity] ?? 1;
 
-  // Calculate arc positioning - cards fan out from center
+  const CARD_WIDTH = 140;
+  const MARGIN = 16; // ~1cm each side
+  const usableWidth = containerWidth - MARGIN * 2;
+
+  // Evenly distribute cards: position each card's center across usable width
+  // index 0 = leftmost, index total-1 = rightmost
+  const posX = total === 1
+    ? containerWidth / 2
+    : MARGIN + (index / (total - 1)) * usableWidth;
+
+  // Rotation: fan out, leftmost tilts left, rightmost tilts right
   const centerIndex = (total - 1) / 2;
   const offsetFromCenter = index - centerIndex;
-  
-  // Rotation: cards angle outward from center (-15° to +15°)
-  const baseRotation = offsetFromCenter * (total > 8 ? 3 : 5);
+  const maxRotation = total > 8 ? 18 : total > 4 ? 22 : 14;
+  const baseRotation = total > 1 ? (offsetFromCenter / centerIndex) * maxRotation : 0;
   const rotation = hovered ? 0 : baseRotation;
-  
-  // Horizontal offset: spread cards in arc
-  const horizontalSpread = total > 10 ? 45 : total > 6 ? 55 : 70;
-  const translateX = offsetFromCenter * horizontalSpread;
-  
-  // Vertical offset: create arc curve (cards in middle are higher)
-  const arcHeight = total > 10 ? 15 : total > 6 ? 20 : 25;
-  const translateY = hovered ? -60 : Math.abs(offsetFromCenter) * arcHeight;
-  
-  // Z-index: hovered card on top, center cards slightly above edges
-  const baseZIndex = 100 - Math.abs(offsetFromCenter);
+
+  // Vertical arc: cards at edges drop down
+  const arcHeight = total > 10 ? 18 : total > 6 ? 24 : 28;
+  const normalised = total > 1 ? offsetFromCenter / centerIndex : 0; // -1 to +1
+  const translateY = hovered ? -70 : normalised * normalised * arcHeight;
+
+  // Z-index: RIGHT cards always on top of LEFT cards (index order), hovered always highest
+  const baseZIndex = index + 1; // index 0 = bottom, highest index = top
   const zIndex = hovered ? 1000 : baseZIndex;
-  
+
   // Scale: hovered card gets bigger
   const scale = hovered ? 1.25 : 1;
 
@@ -1007,19 +1014,21 @@ function CardItem({ card, onClick, index, total }: {
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
-        left: '50%',
+        left: posX,
         bottom: 0,
-        width: 140,
+        width: CARD_WIDTH,
         borderRadius: 18,
         padding: '0 0 12px',
         cursor: 'pointer',
         transform: `
-          translateX(calc(-50% + ${translateX}px)) 
+          translateX(-50%)
           translateY(${translateY}px) 
           rotate(${rotation}deg) 
           scale(${scale})
         `,
-        transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: hovered
+          ? 'transform 0.45s cubic-bezier(0.22, 0.0, 0.2, 1), box-shadow 0.3s ease, z-index 0s'
+          : 'transform 0.35s cubic-bezier(0.4, 0, 0.6, 1), box-shadow 0.3s ease, z-index 0s',
         boxShadow: hovered
           ? '0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.5)'
           : '0 6px 18px rgba(0, 0, 0, 0.2)',
@@ -1064,9 +1073,22 @@ function CardItem({ card, onClick, index, total }: {
 ───────────────────────────────────────────── */
 function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: Card) => void }) {
   const [page, setPage] = useState(0);
-  const cardsPerPage = 12; // Show more cards in arc view
+  const [containerWidth, setContainerWidth] = useState(600);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const cardsPerPage = 12;
   const totalPages = Math.ceil(cards.length / cardsPerPage);
   const visible = cards.slice(page * cardsPerPage, page * cardsPerPage + cardsPerPage);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      setContainerWidth(entries[0].contentRect.width);
+    });
+    ro.observe(el);
+    setContainerWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <div style={{ 
@@ -1135,7 +1157,7 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
           No cards yet — keep up the great work!
         </div>
       ) : (
-        <div style={{ 
+        <div ref={containerRef} style={{ 
           position: 'relative', 
           height: visible.length > 10 ? 240 : visible.length > 6 ? 260 : 280,
           minHeight: 200,
@@ -1150,6 +1172,7 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
               onClick={() => onCardClick(card)}
               index={index}
               total={visible.length}
+              containerWidth={containerWidth}
             />
           ))}
         </div>

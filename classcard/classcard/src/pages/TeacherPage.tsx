@@ -51,6 +51,14 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const [hcEditId, setHcEditId] = useState<string | null>(null);
   const [hcEditDate, setHcEditDate] = useState('');
   const [hcEditComment, setHcEditComment] = useState('');
+  // Pinboard (single message + photo at top of Home Communication)
+  type Pinboard = { id: string; teacher_id: string; message: string; photo_url: string | null; created_at: string };
+  const [pinboard, setPinboard] = useState<Pinboard | null>(null);
+  const [pbMessage, setPbMessage] = useState('');
+  const [pbPhotoUrl, setPbPhotoUrl] = useState<string | null>(null);
+  const [pbStatus, setPbStatus] = useState('');
+  const [pbSaving, setPbSaving] = useState(false);
+  const [pbUploading, setPbUploading] = useState(false);
 
     // Weekly Project state
   const [weeklyProject, setWeeklyProject] = useState<any>(null);
@@ -124,6 +132,19 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
           .order('event_date', { ascending: false });
         setHomeComms((hcData || []) as HomeComm[]);
       } catch { /* table may not exist yet */ }
+      // Load pinboard
+      try {
+        const { data: pb } = await sb
+          .from('home_pinboard')
+          .select('*')
+          .eq('teacher_id', session.user.id)
+          .maybeSingle();
+        if (pb) {
+          setPinboard(pb as Pinboard);
+          setPbMessage(pb.message || '');
+          setPbPhotoUrl(pb.photo_url || null);
+        }
+      } catch { /* table may not exist yet */ }
       setStudents(sList);
       setCards(cList);
       setGeminiKey(AI.getGeminiKey());
@@ -178,6 +199,66 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
       setHcEditId(null); setHcEditDate(''); setHcEditComment('');
       setHcStatus('✓ Post updated!'); setTimeout(() => setHcStatus(''), 2500);
     } catch (err: any) { setHcStatus('Error: ' + err.message); }
+  };
+
+  // ── Pinboard handlers ───────────────────────────────────────────────────
+  const handlePbPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPbUploading(true); setPbStatus('Uploading photo…');
+    try {
+      // Convert to base64 data URL for storage (no separate storage bucket needed)
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        setPbPhotoUrl(dataUrl);
+        setPbUploading(false); setPbStatus('');
+      };
+      reader.onerror = () => { setPbUploading(false); setPbStatus('Error reading file.'); };
+      reader.readAsDataURL(file);
+    } catch (err: any) { setPbUploading(false); setPbStatus('Upload error: ' + err.message); }
+  };
+
+  const handleSavePinboard = async () => {
+    if (!pbMessage.trim()) { setPbStatus('Please enter a message.'); return; }
+    setPbSaving(true); setPbStatus('Saving…');
+    try {
+      const payload = {
+        teacher_id: session.user.id,
+        message: pbMessage.trim(),
+        photo_url: pbPhotoUrl || null,
+      };
+      let saved;
+      if (pinboard?.id) {
+        const { data, error } = await sb.from('home_pinboard').update(payload).eq('id', pinboard.id).select().single();
+        if (error) throw error;
+        saved = data;
+      } else {
+        const { data, error } = await sb.from('home_pinboard').insert(payload).select().single();
+        if (error) throw error;
+        saved = data;
+      }
+      setPinboard(saved as Pinboard);
+      setPbStatus('✓ Saved!'); setTimeout(() => setPbStatus(''), 2500);
+    } catch (err: any) { setPbStatus('Error: ' + err.message); }
+    setPbSaving(false);
+  };
+
+  const handleDeletePbPhoto = async () => {
+    setPbPhotoUrl(null);
+    if (pinboard?.id) {
+      await sb.from('home_pinboard').update({ photo_url: null }).eq('id', pinboard.id);
+      setPinboard(prev => prev ? { ...prev, photo_url: null } : prev);
+    }
+  };
+
+  const handleDeletePinboard = async () => {
+    if (!pinboard?.id) { setPbMessage(''); setPbPhotoUrl(null); return; }
+    try {
+      await sb.from('home_pinboard').delete().eq('id', pinboard.id);
+      setPinboard(null); setPbMessage(''); setPbPhotoUrl(null);
+      setPbStatus('✓ Message cleared.');  setTimeout(() => setPbStatus(''), 2500);
+    } catch (err: any) { setPbStatus('Error: ' + err.message); }
   };
 
   const setWorking = (msg: string) => { setStatus(msg); setStatusType('working'); };
@@ -573,17 +654,82 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
         {/* Home Communication Tab */}
         {tab === 'homecomms' && (
-          <div style={{ maxWidth: 720 }}>
+          <div style={{ maxWidth: 760 }}>
             <div className="tp-section" style={{ marginBottom: 16 }}>📣 Home Communication</div>
-            <p style={{ fontSize: '0.78rem', color: '#8090b0', marginBottom: 20, lineHeight: 1.6 }}>
-              Add dated posts for parents to read on the student page. Posts appear read-only for students and parents — only you can create, edit, or delete them.
+            <p style={{ fontSize: '0.78rem', color: '#8090b0', marginBottom: 22, lineHeight: 1.6 }}>
+              Manage what parents and students see on the Home Communication board. The pinboard message and photo appear at the top; dated events appear below.
             </p>
 
+            {/* ── PINBOARD SECTION ── */}
+            <div style={{ marginBottom: 8, fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8090b0' }}>📌 Pinboard Message &amp; Photo</div>
+            <div className="tp-panel" style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+
+                {/* Message textarea */}
+                <div style={{ flex: 1 }}>
+                  <label className="tp-label">Message</label>
+                  <textarea
+                    className="tp-input"
+                    placeholder="e.g. Welcome to Term 2! It's going to be a great term full of exciting learning…"
+                    value={pbMessage}
+                    onChange={e => setPbMessage(e.target.value)}
+                    rows={5}
+                    style={{ resize: 'vertical', minHeight: 110, lineHeight: 1.6 }}
+                  />
+                </div>
+
+                {/* Photo slot */}
+                <div style={{ flexShrink: 0, width: 160 }}>
+                  <label className="tp-label">Photo (optional)</label>
+                  {pbPhotoUrl ? (
+                    <div style={{ position: 'relative' }}>
+                      <img
+                        src={pbPhotoUrl}
+                        alt="Pinboard"
+                        style={{ width: '100%', height: 130, objectFit: 'cover', borderRadius: 12, border: '2px solid rgba(160,140,220,0.3)', display: 'block' }}
+                      />
+                      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                        <label style={{ flex: 1, padding: '5px 0', background: 'rgba(160,140,220,0.1)', border: '1.5px solid rgba(160,140,220,0.3)', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#6070b0' }}>
+                          🔄 Change
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePbPhotoUpload} disabled={pbUploading} />
+                        </label>
+                        <button onClick={handleDeletePbPhoto} className="tp-btn-danger" style={{ flex: 1, fontSize: '0.65rem', padding: '5px 0' }}>🗑 Remove</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: 130, background: 'rgba(240,236,255,0.5)', border: '2px dashed rgba(160,140,220,0.4)', borderRadius: 12, cursor: pbUploading ? 'wait' : 'pointer', gap: 6 }}>
+                      <span style={{ fontSize: '1.6rem' }}>{pbUploading ? '⏳' : '📷'}</span>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#8090b0' }}>{pbUploading ? 'Uploading…' : 'Click to add photo'}</span>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePbPhotoUpload} disabled={pbUploading} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Save / Delete pinboard */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                <button className="tp-btn-primary" onClick={handleSavePinboard} disabled={pbSaving || pbUploading}>
+                  {pbSaving ? 'Saving…' : pinboard ? '💾 Save Changes' : '📌 Save Pinboard'}
+                </button>
+                {pinboard && (
+                  <button className="tp-btn-danger" onClick={handleDeletePinboard} style={{ fontSize: '0.78rem' }}>🗑 Clear Pinboard</button>
+                )}
+                {pbStatus && (
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: pbStatus.startsWith('Error') ? '#e05050' : pbStatus.startsWith('✓') ? '#22a060' : '#8090b0' }}>
+                    {pbStatus}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* ── DATED EVENTS SECTION ── */}
+            <div style={{ marginBottom: 8, fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8090b0' }}>📅 Dates &amp; Events</div>
+
             {/* Add new post */}
-            <div className="tp-panel" style={{ marginBottom: 20 }}>
-              <div className="tp-label" style={{ marginBottom: 12, fontSize: '0.75rem', color: '#6070b0' }}>📝 New Post</div>
+            <div className="tp-panel" style={{ marginBottom: 16 }}>
+              <div className="tp-label" style={{ marginBottom: 10, fontSize: '0.72rem', color: '#6070b0' }}>📝 New Event</div>
               <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
-                <div style={{ flex: '0 0 180px' }}>
+                <div style={{ flex: '0 0 170px' }}>
                   <label className="tp-label">Date</label>
                   <input
                     type="date"
@@ -594,7 +740,7 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label className="tp-label">Message / Event</label>
+                  <label className="tp-label">Event / Message</label>
                   <textarea
                     className="tp-input"
                     placeholder="e.g. School disco — Friday 16 May. Please return permission slips by Wednesday."
@@ -606,7 +752,7 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button className="tp-btn-primary" onClick={handleAddHomeComm}>+ Add Post</button>
+                <button className="tp-btn-primary" onClick={handleAddHomeComm}>+ Add Event</button>
                 {hcStatus && (
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: hcStatus.startsWith('Error') ? '#e05050' : hcStatus.startsWith('✓') ? '#22a060' : '#8090b0' }}>
                     {hcStatus}
@@ -615,20 +761,19 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
               </div>
             </div>
 
-            {/* Posts list */}
+            {/* Events list */}
             {homeComms.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#a0a8c0', fontSize: '0.85rem' }}>
-                No posts yet. Add your first home communication above.
+              <div style={{ textAlign: 'center', padding: '32px 20px', color: '#a0a8c0', fontSize: '0.85rem', background: 'rgba(240,236,255,0.3)', borderRadius: 16, border: '1.5px dashed rgba(180,160,220,0.3)' }}>
+                No events yet. Add your first dated event above.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {homeComms.map(hc => (
-                  <div key={hc.id} className="tp-panel" style={{ padding: '16px 18px' }}>
+                  <div key={hc.id} className="tp-panel" style={{ padding: '14px 16px' }}>
                     {hcEditId === hc.id ? (
-                      /* Edit mode */
                       <div>
                         <div style={{ display: 'flex', gap: 12, marginBottom: 10, alignItems: 'flex-start' }}>
-                          <div style={{ flex: '0 0 180px' }}>
+                          <div style={{ flex: '0 0 170px' }}>
                             <label className="tp-label">Date</label>
                             <input type="date" className="tp-input" value={hcEditDate} onChange={e => setHcEditDate(e.target.value)} />
                           </div>
@@ -649,7 +794,6 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                         </div>
                       </div>
                     ) : (
-                      /* View mode */
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
                         <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#e8e0ff,#d0c8f8)', borderRadius: 12, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
                           <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7060b0', marginBottom: 2 }}>

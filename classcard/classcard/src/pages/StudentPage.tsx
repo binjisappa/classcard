@@ -1272,6 +1272,8 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const [weeklyProject, setWeeklyProject] = useState<WeeklyProject | null>(null);
   type HomeComm = { id: string; teacher_id: string; event_date: string; comment: string; created_at: string };
   const [homeComms, setHomeComms] = useState<HomeComm[]>([]);
+  type Pinboard = { id: string; teacher_id: string; message: string; photo_url: string | null; created_at: string };
+  const [pinboard, setPinboard] = useState<Pinboard | null>(null);
   const [showProject, setShowProject] = useState(false);
   const [medals, setMedals] = useState({ gold: 0, silver: 0, bronze: 0 });
   const [scoreboard, setScoreboard] = useState<{ student_id: string; name: string; wins: number }[]>([]);
@@ -1392,6 +1394,15 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
               .eq('teacher_id', teacherId)
               .order('event_date', { ascending: false });
             setHomeComms((hcData || []) as HomeComm[]);
+          } catch { /* table may not exist yet */ }
+          // Load pinboard
+          try {
+            const { data: pb } = await sb
+              .from('home_pinboard')
+              .select('*')
+              .eq('teacher_id', teacherId)
+              .maybeSingle();
+            if (pb) setPinboard(pb as Pinboard);
           } catch { /* table may not exist yet */ }
           // Medals + scoreboard (same teacher cohort)
           const [m, sb2] = await Promise.all([
@@ -1599,30 +1610,58 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
           <CardCarousel cards={cards} onCardClick={setDetailCard} />
 
           {/* ── HOME COMMUNICATION ── */}
-          {homeComms.length > 0 && (
+          {(pinboard || homeComms.length > 0) && (
             <div style={{ marginTop: 28, borderRadius: 22, background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(200,190,240,0.5)', boxShadow: '0 6px 28px rgba(160,120,220,0.10)', padding: '22px 24px', backdropFilter: 'blur(8px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                 <span style={{ fontSize: '1.15rem' }}>🏠</span>
                 <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#3040a0', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Home Communication</h2>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {homeComms.map(hc => (
-                  <div key={hc.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '14px 16px', background: 'rgba(240,236,255,0.55)', borderRadius: 14, border: '1px solid rgba(180,160,230,0.22)' }}>
-                    <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#ede8ff,#cfc5f8)', borderRadius: 12, padding: '8px 12px', textAlign: 'center', minWidth: 62 }}>
-                      <div style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7060b0', marginBottom: 1 }}>
-                        {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { month: 'short' }).toUpperCase()}
-                      </div>
-                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4030a0', lineHeight: 1 }}>
-                        {new Date(hc.event_date + 'T12:00:00').getDate()}
-                      </div>
-                      <div style={{ fontSize: '0.5rem', fontWeight: 700, color: '#9080c0', marginTop: 1 }}>
-                        {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'short' }).toUpperCase()}
-                      </div>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.87rem', color: '#3040a0', lineHeight: 1.65, fontWeight: 500, flex: 1, paddingTop: 4 }}>{hc.comment}</p>
+
+              {/* Pinboard message + photo */}
+              {pinboard && (
+                <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', marginBottom: homeComms.length > 0 ? 22 : 0, padding: '18px 20px', background: 'linear-gradient(135deg, rgba(237,232,255,0.7), rgba(220,210,255,0.45))', borderRadius: 16, border: '1.5px solid rgba(180,160,230,0.3)' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9080c0', marginBottom: 8 }}>📌 From your teacher</div>
+                    <p style={{ margin: 0, fontSize: '0.92rem', color: '#2e3a8a', lineHeight: 1.7, fontWeight: 500, whiteSpace: 'pre-wrap' }}>{pinboard.message}</p>
                   </div>
-                ))}
-              </div>
+                  {pinboard.photo_url && (
+                    <div style={{ flexShrink: 0 }}>
+                      <img
+                        src={pinboard.photo_url}
+                        alt="From your teacher"
+                        style={{ width: 140, height: 140, objectFit: 'cover', borderRadius: 14, border: '2px solid rgba(160,140,220,0.35)', boxShadow: '0 4px 16px rgba(120,100,200,0.15)', display: 'block' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Dated events */}
+              {homeComms.length > 0 && (
+                <>
+                  {pinboard && (
+                    <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#a0a8c8', marginBottom: 10 }}>📅 Upcoming Dates &amp; Events</div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {homeComms.map(hc => (
+                      <div key={hc.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '13px 15px', background: 'rgba(240,236,255,0.55)', borderRadius: 14, border: '1px solid rgba(180,160,230,0.22)' }}>
+                        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#ede8ff,#cfc5f8)', borderRadius: 12, padding: '8px 12px', textAlign: 'center', minWidth: 62 }}>
+                          <div style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7060b0', marginBottom: 1 }}>
+                            {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { month: 'short' }).toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4030a0', lineHeight: 1 }}>
+                            {new Date(hc.event_date + 'T12:00:00').getDate()}
+                          </div>
+                          <div style={{ fontSize: '0.5rem', fontWeight: 700, color: '#9080c0', marginTop: 1 }}>
+                            {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'short' }).toUpperCase()}
+                          </div>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.87rem', color: '#3040a0', lineHeight: 1.65, fontWeight: 500, flex: 1, paddingTop: 4 }}>{hc.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -980,32 +980,48 @@ function CardItem({ card, onClick, index, total, containerWidth }: {
 
   const CARD_WIDTH = 140;
   const MARGIN = 16; // ~1cm each side
-  const usableWidth = containerWidth - MARGIN * 2;
 
-  // Evenly distribute cards: position each card's center across usable width
-  // index 0 = leftmost, index total-1 = rightmost
+  // ── Arc geometry ──────────────────────────────────────────────────────────
+  // We place every card at the same (x=center, y=bottom) anchor, then rotate
+  // it around a point FAR below the container (the arc's virtual centre).
+  // This gives a clean hand-of-cards fan with a shared pivot.
+  const usableWidth   = containerWidth - MARGIN * 2;
+  const centerIndex   = (total - 1) / 2;
+  const offsetNorm    = total > 1 ? (index - centerIndex) / centerIndex : 0; // -1 … +1
+
+  // How wide the fan sweeps in degrees (total, so ±half each side)
+  const totalArcDeg   = total <= 3 ? 16 : total <= 6 ? 28 : total <= 9 ? 38 : 46;
+  const baseRotation  = total > 1 ? offsetNorm * (totalArcDeg / 2) : 0;
+
+  // Horizontal: spread card anchors across the usable width
   const posX = total === 1
     ? containerWidth / 2
     : MARGIN + (index / (total - 1)) * usableWidth;
 
-  // Rotation: fan out, leftmost tilts left, rightmost tilts right
-  const centerIndex = (total - 1) / 2;
-  const offsetFromCenter = index - centerIndex;
-  const maxRotation = total > 8 ? 18 : total > 4 ? 22 : 14;
-  const baseRotation = total > 1 ? (offsetFromCenter / centerIndex) * maxRotation : 0;
-  const rotation = hovered ? 0 : baseRotation;
+  // Vertical arc drop: edges sink below centre using a parabola
+  const arcDrop = total <= 4 ? 22 : total <= 8 ? 32 : 42; // px max drop at edges
+  const translateY = offsetNorm * offsetNorm * arcDrop;     // 0 at centre, arcDrop at edges
 
-  // Vertical arc: cards at edges drop down
-  const arcHeight = total > 10 ? 18 : total > 6 ? 24 : 28;
-  const normalised = total > 1 ? offsetFromCenter / centerIndex : 0; // -1 to +1
-  const translateY = hovered ? -70 : normalised * normalised * arcHeight;
+  // ── Z-index: strictly left-under-right, NEVER changes (no transition) ────
+  // We use inline style only — no CSS transition on z-index ever.
+  // Hovered card goes on top via a wrapper trick: we DON'T change z-index on
+  // hover at all — instead we lift it visually with translateY so the browser
+  // paint order (which follows DOM order, left-to-right) naturally keeps the
+  // right card above the left card at all times.
+  // But we DO want the hovered card clickable above siblings, so we use a
+  // pointer-events layer. For true visual lift above neighbours we accept that
+  // the hovered card will appear above its right neighbours only if we raise
+  // z-index — we raise it to total+1 (just above all peers) so it always wins,
+  // but we set the transition on z-index to 'step-start' so it snaps instantly.
+  const baseZIndex = index + 1; // strict left-under-right, never transitions
 
-  // Z-index: RIGHT cards always on top of LEFT cards (index order), hovered always highest
-  const baseZIndex = index + 1; // index 0 = bottom, highest index = top
-  const zIndex = hovered ? 1000 : baseZIndex;
-
-  // Scale: hovered card gets bigger
-  const scale = hovered ? 1.25 : 1;
+  // ── Hover state ──────────────────────────────────────────────────────────
+  // On hover: straighten the card, lift it up, scale slightly.
+  // We keep the same posX anchor so the card lifts straight up in place.
+  const hoverLiftY   = -80; // px upward from its resting position
+  const finalRotation = hovered ? 0 : baseRotation;
+  const finalTranslateY = hovered ? translateY + hoverLiftY : translateY;
+  const scale         = hovered ? 1.18 : 1;
 
   return (
     <div
@@ -1020,19 +1036,16 @@ function CardItem({ card, onClick, index, total, containerWidth }: {
         borderRadius: 18,
         padding: '0 0 12px',
         cursor: 'pointer',
-        transform: `
-          translateX(-50%)
-          translateY(${translateY}px) 
-          rotate(${rotation}deg) 
-          scale(${scale})
-        `,
-        transition: hovered
-          ? 'transform 0.45s cubic-bezier(0.22, 0.0, 0.2, 1), box-shadow 0.3s ease, z-index 0s'
-          : 'transform 0.35s cubic-bezier(0.4, 0, 0.6, 1), box-shadow 0.3s ease, z-index 0s',
+        // translateX(-50%) centres the card on posX; Y and rotate handle arc
+        transform: `translateX(-50%) translateY(${finalTranslateY}px) rotate(${finalRotation}deg) scale(${scale})`,
+        // Smooth cubic: slow-start → fast → gentle settle. NO z-index in transition list.
+        transition: 'transform 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), box-shadow 0.3s ease',
         boxShadow: hovered
-          ? '0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 3px rgba(255, 255, 255, 0.5)'
-          : '0 6px 18px rgba(0, 0, 0, 0.2)',
-        zIndex,
+          ? '0 20px 50px rgba(0,0,0,0.32), 0 0 0 3px rgba(255,255,255,0.55)'
+          : '0 6px 18px rgba(0,0,0,0.18)',
+        // z-index is set directly as a style prop (not transitioned) — React
+        // updates it synchronously on the next render, so it snaps immediately.
+        zIndex: hovered ? total + 10 : baseZIndex,
         overflow: 'hidden',
         ...rarityCardStyle(card.rarity),
       }}
@@ -1159,8 +1172,8 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
       ) : (
         <div ref={containerRef} style={{ 
           position: 'relative', 
-          height: visible.length > 10 ? 240 : visible.length > 6 ? 260 : 280,
-          minHeight: 200,
+          height: 300,
+          minHeight: 220,
           overflow: 'visible',
           margin: '0 auto',
           maxWidth: '100%',

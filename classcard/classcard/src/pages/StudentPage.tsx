@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PokeCard from '../components/PokeCard';
 import BuiltCard from '../components/BuiltCard';
 import { Dashboard } from '../lib/dashboard';
@@ -968,11 +968,10 @@ function StatsPanel({ total, medals, scoreboard, weekEnd, onSignOut, studentName
 /* ─────────────────────────────────────────────
    Card item in carousel
 ───────────────────────────────────────────── */
-function CardItem({ card, onClick, index, total, fanAngle, radius, containerCx, containerBottom }: { 
+function CardItem({ card, onClick, index, fanAngle, radius, containerCx, containerBottom }: { 
   card: Card; 
   onClick: () => void;
   index: number;
-  total: number;
   fanAngle: number;   // this card's angle in degrees from vertical (negative = left, positive = right)
   radius: number;     // distance from pivot to card centre (px)
   containerCx: number; // x of pivot in container coords
@@ -1105,8 +1104,6 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   // The pivot sits below the visible container. Radius controls how tight/wide
   // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
   const CONTAINER_HEIGHT = 280;
-  const CARD_HEIGHT      = 190;
-  const MARGIN           = 16; // ~1cm from each edge
 
   // How far the pivot is below the bottom of the container
   const pivotBelow = 420;
@@ -1205,7 +1202,6 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
               card={card} 
               onClick={() => onCardClick(card)}
               index={index}
-              total={visible.length}
               fanAngle={fanAngles[index]}
               radius={radius}
               containerCx={containerCx}

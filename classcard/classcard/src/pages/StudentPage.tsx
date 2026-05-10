@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import PokeCard from '../components/PokeCard';
 import BuiltCard from '../components/BuiltCard';
 import { Dashboard } from '../lib/dashboard';
-import { sb, getWeeklyScoreboard, getMedalCounts, getWeekEnd } from '../lib/supabase';
+import { sb, getWeeklyScoreboard, getMedalCounts, getWeekEnd, saveStudentRobotSettings, loadStudentRobotSettings } from '../lib/supabase';
 import type { Session } from '../lib/auth';
 import type { Card } from '../lib/supabase';
 
@@ -1418,6 +1418,55 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
   useEffect(() => { loadCards(); }, [loadCards]);
 
+  // Load robot settings from database on mount
+  useEffect(() => {
+    async function loadRobotSettings() {
+      if (!studentId) return;
+      try {
+        const settings = await loadStudentRobotSettings(studentId);
+        if (settings) {
+          // Only update if we have saved settings in database
+          setKnobRaw(settings.colorIndex);
+          if (settings.facePixels) {
+            setFacePixelsRaw(settings.facePixels);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load robot settings:', error);
+      }
+    }
+    loadRobotSettings();
+  }, [studentId]);
+
+  // Save robot settings to database whenever they change
+  useEffect(() => {
+    async function saveRobotSettings() {
+      if (!studentId) return;
+      try {
+        await saveStudentRobotSettings(studentId, knob, facePixels);
+      } catch (error) {
+        console.error('Failed to save robot settings:', error);
+      }
+    }
+    // Debounce saves - only save after user stops changing for 1 second
+    const timeoutId = setTimeout(saveRobotSettings, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [studentId, knob, facePixels]);
+
+  // Handle sign out - save robot settings before logging out
+  const handleSignOut = useCallback(async () => {
+    if (studentId) {
+      try {
+        // Save robot settings one final time before logout
+        await saveStudentRobotSettings(studentId, knob, facePixels);
+      } catch (error) {
+        console.error('Failed to save robot settings on logout:', error);
+      }
+    }
+    // Call the original onSignOut
+    onSignOut();
+  }, [studentId, knob, facePixels, onSignOut]);
+
   // Robot level is now based on card count
   const level = Math.max(1, Math.floor(cards.length / 5) + 1);
   const xp = (cards.length % 5) * 100;
@@ -1551,7 +1600,7 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
               medals={medals}
               scoreboard={scoreboard}
               weekEnd={getWeekEnd()}
-              onSignOut={onSignOut}
+              onSignOut={handleSignOut}
               studentName={studentName}
               studentId={studentId}
             />

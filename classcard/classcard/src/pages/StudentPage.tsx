@@ -1270,6 +1270,8 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const [studentName, setStudentName] = useState('Student');
   const [studentId, setStudentId] = useState('');
   const [weeklyProject, setWeeklyProject] = useState<WeeklyProject | null>(null);
+  type HomeComm = { id: string; teacher_id: string; event_date: string; comment: string; created_at: string };
+  const [homeComms, setHomeComms] = useState<HomeComm[]>([]);
   const [showProject, setShowProject] = useState(false);
   const [medals, setMedals] = useState({ gold: 0, silver: 0, bronze: 0 });
   const [scoreboard, setScoreboard] = useState<{ student_id: string; name: string; wins: number }[]>([]);
@@ -1382,6 +1384,15 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
             .limit(1)
             .maybeSingle();
           if (proj) setWeeklyProject(proj as WeeklyProject);
+          // Home communications
+          try {
+            const { data: hcData } = await sb
+              .from('home_communications')
+              .select('*')
+              .eq('teacher_id', teacherId)
+              .order('event_date', { ascending: false });
+            setHomeComms((hcData || []) as HomeComm[]);
+          } catch { /* table may not exist yet */ }
           // Medals + scoreboard (same teacher cohort)
           const [m, sb2] = await Promise.all([
             getMedalCounts(sid, teacherId),
@@ -1586,6 +1597,34 @@ function StudentPage({ session, onSignOut }: { session: NonNullable<Session>; on
 
           {/* ── CARD CAROUSEL ── */}
           <CardCarousel cards={cards} onCardClick={setDetailCard} />
+
+          {/* ── HOME COMMUNICATION ── */}
+          {homeComms.length > 0 && (
+            <div style={{ marginTop: 28, borderRadius: 22, background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(200,190,240,0.5)', boxShadow: '0 6px 28px rgba(160,120,220,0.10)', padding: '22px 24px', backdropFilter: 'blur(8px)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                <span style={{ fontSize: '1.15rem' }}>🏠</span>
+                <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#3040a0', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Home Communication</h2>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {homeComms.map(hc => (
+                  <div key={hc.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '14px 16px', background: 'rgba(240,236,255,0.55)', borderRadius: 14, border: '1px solid rgba(180,160,230,0.22)' }}>
+                    <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#ede8ff,#cfc5f8)', borderRadius: 12, padding: '8px 12px', textAlign: 'center', minWidth: 62 }}>
+                      <div style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7060b0', marginBottom: 1 }}>
+                        {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { month: 'short' }).toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#4030a0', lineHeight: 1 }}>
+                        {new Date(hc.event_date + 'T12:00:00').getDate()}
+                      </div>
+                      <div style={{ fontSize: '0.5rem', fontWeight: 700, color: '#9080c0', marginTop: 1 }}>
+                        {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'short' }).toUpperCase()}
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.87rem', color: '#3040a0', lineHeight: 1.65, fontWeight: 500, flex: 1, paddingTop: 4 }}>{hc.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

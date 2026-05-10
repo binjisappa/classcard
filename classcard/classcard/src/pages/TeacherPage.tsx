@@ -8,7 +8,7 @@ import { sb } from '../lib/supabase';
 import type { Session } from '../lib/auth';
 import type { Student, Card } from '../lib/supabase';
 
-type TabKey = 'generate' | 'build' | 'weekly' | 'cards' | 'students' | 'settings';
+type TabKey = 'generate' | 'build' | 'weekly' | 'cards' | 'students' | 'homecomms' | 'settings';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'generate', label: '✦ Generate Card' },
@@ -16,6 +16,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'weekly', label: '📋 Weekly Project' },
   { key: 'cards', label: 'My Cards' },
   { key: 'students', label: 'Students' },
+  { key: 'homecomms', label: '🏠 Home Communication' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -41,7 +42,17 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const [detailCard, setDetailCard] = useState<Card | null>(null);
   const [filterStudent, setFilterStudent] = useState<string | null>(null);
 
-  // Weekly Project state
+  // Home Communications state
+  type HomeComm = { id: string; teacher_id: string; event_date: string; comment: string; created_at: string };
+  const [homeComms, setHomeComms] = useState<HomeComm[]>([]);
+  const [hcDate, setHcDate] = useState('');
+  const [hcComment, setHcComment] = useState('');
+  const [hcStatus, setHcStatus] = useState('');
+  const [hcEditId, setHcEditId] = useState<string | null>(null);
+  const [hcEditDate, setHcEditDate] = useState('');
+  const [hcEditComment, setHcEditComment] = useState('');
+
+    // Weekly Project state
   const [weeklyProject, setWeeklyProject] = useState<any>(null);
   const [weeklyTask, setWeeklyTask] = useState('');
   const [weeklyTitle, setWeeklyTitle] = useState('');
@@ -104,6 +115,15 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
           if (wp.card_data) setWeeklyCard(wp.card_data);
         }
       } catch { /* no weekly_projects table yet — ignore */ }
+      // Load home communications
+      try {
+        const { data: hcData } = await sb
+          .from('home_communications')
+          .select('*')
+          .eq('teacher_id', session.user.id)
+          .order('event_date', { ascending: false });
+        setHomeComms((hcData || []) as HomeComm[]);
+      } catch { /* table may not exist yet */ }
       setStudents(sList);
       setCards(cList);
       setGeminiKey(AI.getGeminiKey());
@@ -118,6 +138,47 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
   }, [session.user.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const handleAddHomeComm = async () => {
+    if (!hcDate.trim() || !hcComment.trim()) { setHcStatus('Please fill in both a date and a message.'); return; }
+    setHcStatus('Saving…');
+    try {
+      const { data, error } = await sb.from('home_communications').insert({
+        teacher_id: session.user.id,
+        event_date: hcDate,
+        comment: hcComment.trim(),
+      }).select().single();
+      if (error) throw error;
+      setHomeComms(prev => [data as HomeComm, ...prev].sort((a, b) => b.event_date.localeCompare(a.event_date)));
+      setHcDate(''); setHcComment(''); setHcStatus('✓ Post added!');
+      setTimeout(() => setHcStatus(''), 2500);
+    } catch (err: any) { setHcStatus('Error: ' + (err.message || 'Failed to save')); }
+  };
+
+  const handleDeleteHomeComm = async (id: string) => {
+    try {
+      await sb.from('home_communications').delete().eq('id', id);
+      setHomeComms(prev => prev.filter(h => h.id !== id));
+    } catch (err: any) { setHcStatus('Error deleting: ' + err.message); }
+  };
+
+  const handleStartEditHomeComm = (hc: HomeComm) => {
+    setHcEditId(hc.id); setHcEditDate(hc.event_date); setHcEditComment(hc.comment);
+  };
+
+  const handleSaveEditHomeComm = async () => {
+    if (!hcEditId || !hcEditDate.trim() || !hcEditComment.trim()) return;
+    setHcStatus('Saving…');
+    try {
+      const { data, error } = await sb.from('home_communications')
+        .update({ event_date: hcEditDate, comment: hcEditComment.trim() })
+        .eq('id', hcEditId).select().single();
+      if (error) throw error;
+      setHomeComms(prev => prev.map(h => h.id === hcEditId ? data as HomeComm : h).sort((a, b) => b.event_date.localeCompare(a.event_date)));
+      setHcEditId(null); setHcEditDate(''); setHcEditComment('');
+      setHcStatus('✓ Post updated!'); setTimeout(() => setHcStatus(''), 2500);
+    } catch (err: any) { setHcStatus('Error: ' + err.message); }
+  };
 
   const setWorking = (msg: string) => { setStatus(msg); setStatusType('working'); };
   const setDone = (msg: string) => { setStatus(msg); setStatusType('done'); setTimeout(() => setStatus(''), 2800); };
@@ -505,6 +566,116 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                   ))}
                 </tbody>
               </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Home Communication Tab */}
+        {tab === 'homecomms' && (
+          <div style={{ maxWidth: 720 }}>
+            <div className="tp-section" style={{ marginBottom: 16 }}>📣 Home Communication</div>
+            <p style={{ fontSize: '0.78rem', color: '#8090b0', marginBottom: 20, lineHeight: 1.6 }}>
+              Add dated posts for parents to read on the student page. Posts appear read-only for students and parents — only you can create, edit, or delete them.
+            </p>
+
+            {/* Add new post */}
+            <div className="tp-panel" style={{ marginBottom: 20 }}>
+              <div className="tp-label" style={{ marginBottom: 12, fontSize: '0.75rem', color: '#6070b0' }}>📝 New Post</div>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
+                <div style={{ flex: '0 0 180px' }}>
+                  <label className="tp-label">Date</label>
+                  <input
+                    type="date"
+                    className="tp-input"
+                    value={hcDate}
+                    onChange={e => setHcDate(e.target.value)}
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label className="tp-label">Message / Event</label>
+                  <textarea
+                    className="tp-input"
+                    placeholder="e.g. School disco — Friday 16 May. Please return permission slips by Wednesday."
+                    value={hcComment}
+                    onChange={e => setHcComment(e.target.value)}
+                    rows={3}
+                    style={{ resize: 'vertical', minHeight: 70, lineHeight: 1.5 }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button className="tp-btn-primary" onClick={handleAddHomeComm}>+ Add Post</button>
+                {hcStatus && (
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: hcStatus.startsWith('Error') ? '#e05050' : hcStatus.startsWith('✓') ? '#22a060' : '#8090b0' }}>
+                    {hcStatus}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Posts list */}
+            {homeComms.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#a0a8c0', fontSize: '0.85rem' }}>
+                No posts yet. Add your first home communication above.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {homeComms.map(hc => (
+                  <div key={hc.id} className="tp-panel" style={{ padding: '16px 18px' }}>
+                    {hcEditId === hc.id ? (
+                      /* Edit mode */
+                      <div>
+                        <div style={{ display: 'flex', gap: 12, marginBottom: 10, alignItems: 'flex-start' }}>
+                          <div style={{ flex: '0 0 180px' }}>
+                            <label className="tp-label">Date</label>
+                            <input type="date" className="tp-input" value={hcEditDate} onChange={e => setHcEditDate(e.target.value)} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label className="tp-label">Message</label>
+                            <textarea
+                              className="tp-input"
+                              value={hcEditComment}
+                              onChange={e => setHcEditComment(e.target.value)}
+                              rows={3}
+                              style={{ resize: 'vertical', minHeight: 60, lineHeight: 1.5 }}
+                            />
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="tp-btn-primary" onClick={handleSaveEditHomeComm} style={{ fontSize: '0.78rem', padding: '7px 16px' }}>Save Changes</button>
+                          <button className="tp-btn-outline" onClick={() => setHcEditId(null)} style={{ fontSize: '0.78rem' }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* View mode */
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                        <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#e8e0ff,#d0c8f8)', borderRadius: 12, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
+                          <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7060b0', marginBottom: 2 }}>
+                            {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { month: 'short' }).toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4030a0', lineHeight: 1 }}>
+                            {new Date(hc.event_date + 'T12:00:00').getDate()}
+                          </div>
+                          <div style={{ fontSize: '0.55rem', fontWeight: 700, color: '#9080c0', marginTop: 1 }}>
+                            {new Date(hc.event_date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'short' }).toUpperCase()}
+                          </div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontSize: '0.88rem', color: '#3040a0', lineHeight: 1.6, fontWeight: 600 }}>{hc.comment}</p>
+                          <div style={{ fontSize: '0.65rem', color: '#b0b8d0', marginTop: 6 }}>
+                            Posted {new Date(hc.created_at).toLocaleDateString('en-NZ')}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button className="tp-btn-outline" onClick={() => handleStartEditHomeComm(hc)} style={{ fontSize: '0.72rem', padding: '5px 11px' }}>✏️ Edit</button>
+                          <button className="tp-btn-danger" onClick={() => handleDeleteHomeComm(hc.id)} style={{ fontSize: '0.72rem', padding: '5px 11px' }}>🗑 Delete</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

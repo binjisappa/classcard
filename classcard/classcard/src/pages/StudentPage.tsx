@@ -24,18 +24,6 @@ const RARITY_ICONS: Record<string, string> = {
 };
 
 
-function rarityCardStyle(rarity: string): React.CSSProperties {
-  switch (rarity) {
-    case 'gold-rare':
-      return { background: 'linear-gradient(145deg, #fff8e1 0%, #ffe082 60%, #ffd54f 100%)', border: '2px solid #ffca28' };
-    case 'silver':
-      return { background: 'linear-gradient(145deg, #f5f5f5 0%, #e0e0e0 60%, #bdbdbd 100%)', border: '2px solid #b0bec5' };
-    case 'prismatic':
-      return { background: 'linear-gradient(135deg, #fce4ec, #e8eaf6, #e0f7fa, #f3e5f5, #fce4ec)', border: '2px solid #ce93d8' };
-    default:
-      return { background: 'linear-gradient(145deg, #fafafa 0%, #f0f4ff 100%)', border: '2px solid #b3c2e8' };
-  }
-}
 
 /* Base 4 colour themes */
 const BASE_COLOR_THEMES = [

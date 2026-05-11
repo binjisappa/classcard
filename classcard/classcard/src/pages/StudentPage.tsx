@@ -978,7 +978,6 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
   containerBottom: number; // y of pivot in container coords (below the container base)
 }) {
   const [hovered, setHovered] = useState(false);
-  const stars = { common: 1, silver: 2, 'gold-rare': 3, prismatic: 4 }[card.rarity] ?? 1;
 
   // ── True pivot-based fan geometry ────────────────────────────────────────
   // The pivot sits below the visible container. Each card's centre lies on a
@@ -1021,6 +1020,11 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
   // slide a card out from the fan without reordering the stack).
   const zIndex = index + 1;
 
+  // Scale the full card (260×375) down to fit the fan slot
+  const FULL_CARD_W = 260;
+  const FULL_CARD_H = 375;
+  const scale = CARD_WIDTH / FULL_CARD_W; // ≈ 0.538
+
   return (
     <div
       onClick={onClick}
@@ -1031,48 +1035,31 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
         left,
         top,
         width: CARD_WIDTH,
-        borderRadius: 18,
-        padding: '0 0 12px',
+        height: CARD_HEIGHT,
         cursor: 'pointer',
-        // Rotation matches the fan angle so cards always face outward from pivot
         transform: `rotate(${fanAngle}deg) scale(${hovered ? 1.12 : 1})`,
         transformOrigin: 'center center',
-        // Only transform and box-shadow transition — z-index is never transitioned
         transition: 'left 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), top 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), transform 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), box-shadow 0.3s ease',
         boxShadow: hovered
           ? '0 20px 50px rgba(0,0,0,0.32), 0 0 0 3px rgba(255,255,255,0.55)'
           : '0 6px 18px rgba(0,0,0,0.18)',
         zIndex,
         overflow: 'hidden',
-        ...rarityCardStyle(card.rarity),
+        borderRadius: 18 * scale,
       }}
     >
-      {/* Stars */}
-      <div style={{ padding: '8px 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.7rem', color: card.rarity === 'common' ? '#9090b0' : card.rarity === 'silver' ? '#7090a0' : card.rarity === 'gold-rare' ? '#c08000' : '#9040c0' }}>
-          {RARITY_ICONS[card.rarity]}
-        </span>
-        <span style={{ fontSize: '0.55rem', color: 'rgba(0,0,0,0.3)' }}>
-          {'★'.repeat(stars)}{'☆'.repeat(4 - stars)}
-        </span>
-      </div>
-
-      {/* Image */}
-      <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        {card.image_url
-          ? <img src={card.image_url} alt={card.card_name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-          : <div style={{ fontSize: '2.2rem', opacity: 0.3 }}>🃏</div>
+      {/* Render the real card scaled down to fit */}
+      <div style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        width: FULL_CARD_W,
+        height: FULL_CARD_H,
+        pointerEvents: 'none', // clicks handled by outer div
+      }}>
+        {card.card_source === 'built'
+          ? <BuiltCard card={card} />
+          : <PokeCard card={card} />
         }
-      </div>
-
-      {/* Name */}
-      <div style={{ padding: '6px 10px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.08em', color: '#3040a0', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {card.card_name}
-        </div>
-        {card.rarity === 'prismatic' && (
-          <div style={{ fontSize: '0.48rem', color: '#9040c0', marginTop: 2 }}>✦ PRISMATIC ✦</div>
-        )}
       </div>
     </div>
   );

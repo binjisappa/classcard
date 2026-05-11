@@ -1101,38 +1101,32 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   }, []);
 
   // ── Fan geometry (computed once per render, shared across all CardItems) ──
+  // The pivot sits below the visible container. Radius controls how tight/wide
+  // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
   const CONTAINER_HEIGHT = 260;
+
+  // How far the pivot is below the bottom of the container.
+  // Smaller = tighter arc (cards sit lower). Larger = flatter arc (cards float higher).
   const pivotBelow = 160;
   const radius     = pivotBelow + CONTAINER_HEIGHT;
 
-  // Total angle swept by the whole fan
+  // Total fan angle swept by the whole fan
   const totalSpreadDeg = visible.length <= 1 ? 0
     : Math.min(62, visible.length * (containerWidth > 500 ? 5.6 : 4.6));
 
+  // Each card's angle, evenly spaced, centred on 0
   const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
-  // Raw angles centred on 0, with the same rightward tilt that looked good
-  const fanCentreOffset = totalSpreadDeg * 0.12;
-  const rawAngles = visible.map((_, i) =>
+  // Shift the fan rightward: instead of centring at 0, offset it so more
+  // of the sweep goes to the right. A positive offset tilts the whole fan right.
+  const fanCentreOffset = totalSpreadDeg * 0.12; // ~12% of sweep pushed right
+  const fanAngles = visible.map((_, i) =>
     -totalSpreadDeg / 2 + i * angleStep + fanCentreOffset
   );
 
-  // ── Auto-centre: compute where leftmost and rightmost card centres land
-  // when pivot is at x=0, then shift the pivot so the fan midpoint lands
-  // exactly at containerWidth/2. This makes it screen-size independent.
-  const CARD_WIDTH = 140;
+  // Pivot x: shift slightly right of container centre to match the fan offset
+  const containerCx     = containerWidth / 2 + containerWidth * 0.04;
+  // Pivot y in container coords = CONTAINER_HEIGHT + pivotBelow
   const containerBottom = CONTAINER_HEIGHT + pivotBelow;
-
-  const cardXatPivotZero = (angle: number) =>
-    radius * Math.sin((angle * Math.PI) / 180);
-
-  const leftX  = cardXatPivotZero(rawAngles[0] ?? 0) - CARD_WIDTH / 2;
-  const rightX = cardXatPivotZero(rawAngles[rawAngles.length - 1] ?? 0) + CARD_WIDTH / 2;
-  const fanMidX = (leftX + rightX) / 2;
-
-  // Shift pivot so fanMidX lands on the container centre
-  const containerCx = containerWidth / 2 - fanMidX;
-
-  const fanAngles = rawAngles;
 
   return (
     <div style={{ 

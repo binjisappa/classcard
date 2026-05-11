@@ -1058,62 +1058,37 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
 ───────────────────────────────────────────── */
 function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: Card) => void }) {
   const [page, setPage] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(600);
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const cardsPerPage = 12;
   const totalPages = Math.ceil(cards.length / cardsPerPage);
   const visible = cards.slice(page * cardsPerPage, page * cardsPerPage + cardsPerPage);
 
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      setContainerWidth(entries[0].contentRect.width);
-    });
-    ro.observe(el);
-    setContainerWidth(el.getBoundingClientRect().width);
-    return () => ro.disconnect();
-  }, []);
+  // ── Fan geometry ─────────────────────────────────────────────────────────
+  // The pivot is an absolutely-positioned point anchored to 50% of the
+  // container width via CSS (left:'50%'). Cards are positioned relative to
+  // that pivot using pure offsets, so the fan always stays centred regardless
+  // of container/screen width — no JS width measurement needed.
 
-  // ── Fan geometry (computed once per render, shared across all CardItems) ──
-  // The pivot sits below the visible container. Radius controls how tight/wide
-  // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
-  // ── Geometry goal:
-  //   • Centre card sits upright, its centre at (containerWidth/2, centreCardY)
-  //   • centreCardY chosen so the bottom of the centre card lands near the
-  //     bottom of the container → card is "half visible" from below the arc
-  //   • pivot is directly below the centre card at distance `radius`
-  //   • CONTAINER_HEIGHT clips the top; overflow:visible lets cards peek above
-
-  const CARD_HEIGHT     = 195;
-  // How much of the centre card we want visible above the container bottom.
-  // 60% of card height = 117 px visible, 40% hidden below.
-  const visibleFraction = 0.62;
-  const centreCardY     = 260 - CARD_HEIGHT * visibleFraction; // ≈ 139 px from top
-
-  // Radius: how far the pivot is from each card centre (larger = flatter arc)
-  const radius          = 520;
-
-  // pivotY in container coords: directly below centre card by `radius`
-  const pivotY          = centreCardY + radius;   // pivot is BELOW the container
-
+  const CARD_HEIGHT      = 195;
   const CONTAINER_HEIGHT = 260;
 
-  // Total spread: scale with card count and container width
-  const totalSpreadDeg = visible.length <= 1 ? 0
-    : Math.min(54, visible.length * (containerWidth > 500 ? 4.8 : 4.0));
+  // How much of each card is visible above the container bottom (62% = nicely fanned)
+  const visibleFraction  = 0.62;
+  const centreCardY      = CONTAINER_HEIGHT - CARD_HEIGHT * visibleFraction;
 
-  const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
-  const fanAngles = visible.map((_, i) => -totalSpreadDeg / 2 + i * angleStep);
+  // Radius controls arc tightness — larger = flatter arc
+  const radius           = 520;
 
-  // The fan's visual centre of mass is slightly right of the geometric pivot
-  // because the leftmost cards extend further left than the rightmost extend right
-  // (due to card width + rotation). We correct by half a card width, scaled by
-  // how spread out the fan is — this stays proportional at any screen width.
-  const spreadFraction  = totalSpreadDeg / 90; // 0→1 as fan goes from closed to 90°
-  const containerCx     = containerWidth / 2 + (140 / 2) * spreadFraction * 0.72; // 140 = CARD_WIDTH
-  // containerBottom is pivotY expressed in container coords (used by CardItem)
-  const containerBottom = pivotY;
+  // pivotY below the top of the container
+  const pivotY           = centreCardY + radius;
+
+  // Total angular spread of the whole fan
+  const totalSpreadDeg   = visible.length <= 1 ? 0 : Math.min(54, visible.length * 4.8);
+  const angleStep        = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
+  const fanAngles        = visible.map((_, i) => -totalSpreadDeg / 2 + i * angleStep);
+
+  // pivotX is always 0 — we anchor to CSS 50% on the container (see below)
+  const pivotX           = 0;
+  const containerBottom  = pivotY;
 
   return (
     <div style={{ 
@@ -1182,25 +1157,27 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
           No cards yet — keep up the great work!
         </div>
       ) : (
-        <div ref={containerRef} style={{ 
+        <div style={{ 
           position: 'relative', 
           height: CONTAINER_HEIGHT,
           overflow: 'visible',
-          margin: '0 auto',
-          maxWidth: '100%',
+          width: '100%',
         }}>
-          {visible.map((card, index) => (
-            <CardItem 
-              key={card.id} 
-              card={card} 
-              onClick={() => onCardClick(card)}
-              index={index}
-              fanAngle={fanAngles[index]}
-              radius={radius}
-              containerCx={containerCx}
-              containerBottom={containerBottom}
-            />
-          ))}
+          {/* Invisible pivot point anchored to horizontal centre via CSS */}
+          <div style={{ position: 'absolute', left: '50%', top: 0, width: 0, height: 0 }}>
+            {visible.map((card, index) => (
+              <CardItem 
+                key={card.id} 
+                card={card} 
+                onClick={() => onCardClick(card)}
+                index={index}
+                fanAngle={fanAngles[index]}
+                radius={radius}
+                containerCx={pivotX}
+                containerBottom={containerBottom}
+              />
+            ))}
+          </div>
         </div>
       )}
 

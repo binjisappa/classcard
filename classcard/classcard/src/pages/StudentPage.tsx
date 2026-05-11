@@ -1131,7 +1131,7 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
   const fanAngles = visible.map((_, i) => -totalSpreadDeg / 2 + i * angleStep);
 
-  const containerCx     = containerWidth / 2;
+  const containerCx     = containerWidth / 2 + 80; // offset to visually centre the fan
   // containerBottom is pivotY expressed in container coords (used by CardItem)
   const containerBottom = pivotY;
 

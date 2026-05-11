@@ -995,7 +995,7 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
 
   const angleRad = (fanAngle * Math.PI) / 180;
   const CARD_WIDTH  = 140;
-  const CARD_HEIGHT = 190; // approximate rendered card height
+  const CARD_HEIGHT = 195;
 
   // Card centre position in container space
   const cardCx = containerCx + radius * Math.sin(angleRad);
@@ -1103,27 +1103,37 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   // ── Fan geometry (computed once per render, shared across all CardItems) ──
   // The pivot sits below the visible container. Radius controls how tight/wide
   // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
+  // ── Geometry goal:
+  //   • Centre card sits upright, its centre at (containerWidth/2, centreCardY)
+  //   • centreCardY chosen so the bottom of the centre card lands near the
+  //     bottom of the container → card is "half visible" from below the arc
+  //   • pivot is directly below the centre card at distance `radius`
+  //   • CONTAINER_HEIGHT clips the top; overflow:visible lets cards peek above
+
+  const CARD_HEIGHT     = 195;
+  // How much of the centre card we want visible above the container bottom.
+  // 60% of card height = 117 px visible, 40% hidden below.
+  const visibleFraction = 0.62;
+  const centreCardY     = 260 - CARD_HEIGHT * visibleFraction; // ≈ 139 px from top
+
+  // Radius: how far the pivot is from each card centre (larger = flatter arc)
+  const radius          = 520;
+
+  // pivotY in container coords: directly below centre card by `radius`
+  const pivotY          = centreCardY + radius;   // pivot is BELOW the container
+
   const CONTAINER_HEIGHT = 260;
 
-  // How far the pivot is below the bottom of the container.
-  // Smaller = tighter arc (cards sit lower, more of the card is below the curve).
-  // Larger = flatter arc (cards float higher).
-  const pivotBelow = 280;
-  const radius     = pivotBelow + CONTAINER_HEIGHT; // distance from pivot to card centres
-
-  // Total fan angle: wide enough to span ~edge to edge of the container.
-  // The leftmost card starts near the left margin, rightmost near the right.
+  // Total spread: scale with card count and container width
   const totalSpreadDeg = visible.length <= 1 ? 0
-    : Math.min(58, visible.length * (containerWidth > 500 ? 5.2 : 4.4));
+    : Math.min(54, visible.length * (containerWidth > 500 ? 4.8 : 4.0));
 
-  // Each card's angle, evenly spaced, centred on 0
   const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
   const fanAngles = visible.map((_, i) => -totalSpreadDeg / 2 + i * angleStep);
 
-  // Pivot x = horizontal centre of the container
   const containerCx     = containerWidth / 2;
-  // Pivot y in container coords = CONTAINER_HEIGHT + pivotBelow
-  const containerBottom = CONTAINER_HEIGHT + pivotBelow;
+  // containerBottom is pivotY expressed in container coords (used by CardItem)
+  const containerBottom = pivotY;
 
   return (
     <div style={{ 

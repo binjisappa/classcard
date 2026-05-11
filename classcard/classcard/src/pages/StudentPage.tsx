@@ -24,18 +24,6 @@ const RARITY_ICONS: Record<string, string> = {
 };
 
 
-function rarityCardStyle(rarity: string): React.CSSProperties {
-  switch (rarity) {
-    case 'gold-rare':
-      return { background: 'linear-gradient(145deg, #fff8e1 0%, #ffe082 60%, #ffd54f 100%)', border: '2px solid #ffca28' };
-    case 'silver':
-      return { background: 'linear-gradient(145deg, #f5f5f5 0%, #e0e0e0 60%, #bdbdbd 100%)', border: '2px solid #b0bec5' };
-    case 'prismatic':
-      return { background: 'linear-gradient(135deg, #fce4ec, #e8eaf6, #e0f7fa, #f3e5f5, #fce4ec)', border: '2px solid #ce93d8' };
-    default:
-      return { background: 'linear-gradient(145deg, #fafafa 0%, #f0f4ff 100%)', border: '2px solid #b3c2e8' };
-  }
-}
 
 /* Base 4 colour themes */
 const BASE_COLOR_THEMES = [
@@ -978,7 +966,6 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
   containerBottom: number; // y of pivot in container coords (below the container base)
 }) {
   const [hovered, setHovered] = useState(false);
-  const stars = { common: 1, silver: 2, 'gold-rare': 3, prismatic: 4 }[card.rarity] ?? 1;
 
   // ── True pivot-based fan geometry ────────────────────────────────────────
   // The pivot sits below the visible container. Each card's centre lies on a
@@ -995,7 +982,7 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
 
   const angleRad = (fanAngle * Math.PI) / 180;
   const CARD_WIDTH  = 140;
-  const CARD_HEIGHT = 190; // approximate rendered card height
+  const CARD_HEIGHT = 195;
 
   // Card centre position in container space
   const cardCx = containerCx + radius * Math.sin(angleRad);
@@ -1021,6 +1008,11 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
   // slide a card out from the fan without reordering the stack).
   const zIndex = index + 1;
 
+  // Scale the full card (260×375) down to fit the fan slot
+  const FULL_CARD_W = 260;
+  const FULL_CARD_H = 375;
+  const scale = CARD_WIDTH / FULL_CARD_W; // ≈ 0.538
+
   return (
     <div
       onClick={onClick}
@@ -1031,48 +1023,31 @@ function CardItem({ card, onClick, index, fanAngle, radius, containerCx, contain
         left,
         top,
         width: CARD_WIDTH,
-        borderRadius: 18,
-        padding: '0 0 12px',
+        height: CARD_HEIGHT,
         cursor: 'pointer',
-        // Rotation matches the fan angle so cards always face outward from pivot
         transform: `rotate(${fanAngle}deg) scale(${hovered ? 1.12 : 1})`,
         transformOrigin: 'center center',
-        // Only transform and box-shadow transition — z-index is never transitioned
         transition: 'left 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), top 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), transform 0.42s cubic-bezier(0.25, 0.0, 0.15, 1), box-shadow 0.3s ease',
         boxShadow: hovered
           ? '0 20px 50px rgba(0,0,0,0.32), 0 0 0 3px rgba(255,255,255,0.55)'
           : '0 6px 18px rgba(0,0,0,0.18)',
         zIndex,
         overflow: 'hidden',
-        ...rarityCardStyle(card.rarity),
+        borderRadius: 18 * scale,
       }}
     >
-      {/* Stars */}
-      <div style={{ padding: '8px 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.7rem', color: card.rarity === 'common' ? '#9090b0' : card.rarity === 'silver' ? '#7090a0' : card.rarity === 'gold-rare' ? '#c08000' : '#9040c0' }}>
-          {RARITY_ICONS[card.rarity]}
-        </span>
-        <span style={{ fontSize: '0.55rem', color: 'rgba(0,0,0,0.3)' }}>
-          {'★'.repeat(stars)}{'☆'.repeat(4 - stars)}
-        </span>
-      </div>
-
-      {/* Image */}
-      <div style={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        {card.image_url
-          ? <img src={card.image_url} alt={card.card_name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-          : <div style={{ fontSize: '2.2rem', opacity: 0.3 }}>🃏</div>
+      {/* Render the real card scaled down to fit */}
+      <div style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        width: FULL_CARD_W,
+        height: FULL_CARD_H,
+        pointerEvents: 'none', // clicks handled by outer div
+      }}>
+        {card.card_source === 'built'
+          ? <BuiltCard card={card} />
+          : <PokeCard card={card} />
         }
-      </div>
-
-      {/* Name */}
-      <div style={{ padding: '6px 10px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.08em', color: '#3040a0', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {card.card_name}
-        </div>
-        {card.rarity === 'prismatic' && (
-          <div style={{ fontSize: '0.48rem', color: '#9040c0', marginTop: 2 }}>✦ PRISMATIC ✦</div>
-        )}
       </div>
     </div>
   );
@@ -1103,30 +1078,42 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   // ── Fan geometry (computed once per render, shared across all CardItems) ──
   // The pivot sits below the visible container. Radius controls how tight/wide
   // the arc looks. totalSpreadDeg is the total angle swept by the whole fan.
+  // ── Geometry goal:
+  //   • Centre card sits upright, its centre at (containerWidth/2, centreCardY)
+  //   • centreCardY chosen so the bottom of the centre card lands near the
+  //     bottom of the container → card is "half visible" from below the arc
+  //   • pivot is directly below the centre card at distance `radius`
+  //   • CONTAINER_HEIGHT clips the top; overflow:visible lets cards peek above
+
+  const CARD_HEIGHT     = 195;
+  // How much of the centre card we want visible above the container bottom.
+  // 60% of card height = 117 px visible, 40% hidden below.
+  const visibleFraction = 0.62;
+  const centreCardY     = 260 - CARD_HEIGHT * visibleFraction; // ≈ 139 px from top
+
+  // Radius: how far the pivot is from each card centre (larger = flatter arc)
+  const radius          = 520;
+
+  // pivotY in container coords: directly below centre card by `radius`
+  const pivotY          = centreCardY + radius;   // pivot is BELOW the container
+
   const CONTAINER_HEIGHT = 260;
 
-  // How far the pivot is below the bottom of the container.
-  // Smaller = tighter arc (cards sit lower). Larger = flatter arc (cards float higher).
-  const pivotBelow = 160;
-  const radius     = pivotBelow + CONTAINER_HEIGHT;
-
-  // Total fan angle swept by the whole fan
+  // Total spread: scale with card count and container width
   const totalSpreadDeg = visible.length <= 1 ? 0
-    : Math.min(62, visible.length * (containerWidth > 500 ? 5.6 : 4.6));
+    : Math.min(54, visible.length * (containerWidth > 500 ? 4.8 : 4.0));
 
-  // Each card's angle, evenly spaced, centred on 0
   const angleStep = visible.length > 1 ? totalSpreadDeg / (visible.length - 1) : 0;
-  // Shift the fan rightward: instead of centring at 0, offset it so more
-  // of the sweep goes to the right. A positive offset tilts the whole fan right.
-  const fanCentreOffset = totalSpreadDeg * 0.12; // ~12% of sweep pushed right
-  const fanAngles = visible.map((_, i) =>
-    -totalSpreadDeg / 2 + i * angleStep + fanCentreOffset
-  );
+  const fanAngles = visible.map((_, i) => -totalSpreadDeg / 2 + i * angleStep);
 
-  // Pivot x: shift slightly right of container centre to match the fan offset
-  const containerCx     = containerWidth / 2 + containerWidth * 0.04;
-  // Pivot y in container coords = CONTAINER_HEIGHT + pivotBelow
-  const containerBottom = CONTAINER_HEIGHT + pivotBelow;
+  // The fan's visual centre of mass is slightly right of the geometric pivot
+  // because the leftmost cards extend further left than the rightmost extend right
+  // (due to card width + rotation). We correct by half a card width, scaled by
+  // how spread out the fan is — this stays proportional at any screen width.
+  const spreadFraction  = totalSpreadDeg / 90; // 0→1 as fan goes from closed to 90°
+  const containerCx     = containerWidth / 2 + (CARD_WIDTH / 2) * spreadFraction * 0.72;
+  // containerBottom is pivotY expressed in container coords (used by CardItem)
+  const containerBottom = pivotY;
 
   return (
     <div style={{ 

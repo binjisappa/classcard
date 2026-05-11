@@ -1111,7 +1111,7 @@ function CardCarousel({ cards, onCardClick }: { cards: Card[]; onCardClick: (c: 
   // (due to card width + rotation). We correct by half a card width, scaled by
   // how spread out the fan is — this stays proportional at any screen width.
   const spreadFraction  = totalSpreadDeg / 90; // 0→1 as fan goes from closed to 90°
-  const containerCx     = containerWidth / 2 + (CARD_WIDTH / 2) * spreadFraction * 0.72;
+  const containerCx     = containerWidth / 2 + (140 / 2) * spreadFraction * 0.72; // 140 = CARD_WIDTH
   // containerBottom is pivotY expressed in container coords (used by CardItem)
   const containerBottom = pivotY;
 

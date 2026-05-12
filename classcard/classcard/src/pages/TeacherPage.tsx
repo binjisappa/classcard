@@ -954,51 +954,130 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
         );
       case 'downloadCards': {
         const studentCards = cards.filter(c => c.student_id === modal.data.id);
-        const TYPE_COLORS: Record<string, string> = {
-          fire: '#ef4444', water: '#3b82f6', nature: '#22c55e',
-          electric: '#eab308', psychic: '#a855f7',
-        };
-        const RARITY_COLORS: Record<string, string> = {
-          common: '#9ca3af', silver: '#94a3b8', 'gold-rare': '#f59e0b', prismatic: '#a855f7',
-        };
         const handleDownload = () => {
-          const cardHtml = studentCards.map(card => {
+          // ── helpers ──────────────────────────────────────────────────────
+          const TYPE_COLORS: Record<string, string> = {
+            fire: '#ef4444', water: '#3b82f6', nature: '#22c55e',
+            electric: '#eab308', psychic: '#a855f7',
+          };
+          const RARITY_COLORS: Record<string, string> = {
+            common: '#9ca3af', silver: '#94a3b8', 'gold-rare': '#f59e0b', prismatic: '#a855f7',
+          };
+          const RARITY_BG: Record<string, string> = {
+            common:     'linear-gradient(160deg,#f5e97a 0%,#e8c830 40%,#f5e097 70%,#ffe680 100%)',
+            silver:     'linear-gradient(160deg,#d8e4ee 0%,#a8bfcf 40%,#e0eaf2 70%,#c0d4e4 100%)',
+            'gold-rare':'linear-gradient(160deg,#ffe090 0%,#f0b020 30%,#ffd060 60%,#e89010 80%,#ffdc80 100%)',
+            prismatic:  'linear-gradient(135deg,#ffb3b3 0%,#ffd9a0 14%,#ffffa0 28%,#b3ffb3 42%,#a0e8ff 57%,#b3b3ff 71%,#e8b3ff 85%,#ffb3e8 100%)',
+          };
+          const RARITY_BORDER: Record<string, string> = {
+            common: '#c8a000', silver: '#7a9ab0', 'gold-rare': '#c07800', prismatic: '#c080ff',
+          };
+          const RARITY_LABELS: Record<string, string> = {
+            common: 'COMMON', silver: 'SILVER', 'gold-rare': 'GOLD', prismatic: 'PRISMATIC',
+          };
+
+          const renderPokeCard = (card: any) => {
+            const bg = RARITY_BG[card.rarity] || RARITY_BG.common;
+            const border = RARITY_BORDER[card.rarity] || '#c8a000';
+            const imgHtml = card.image_url
+              ? `<img src="${card.image_url}" alt="${card.card_name}" style="width:100%;height:100%;object-fit:contain;" />`
+              : `<span style="font-size:40px;">🎭</span>`;
+            return `<div class="poke-card" data-rarity="${card.rarity}" style="background:${bg};border-color:${border};">
+  <div class="card-content">
+    <div class="card-header">
+      <span class="card-name">${card.card_name}</span>
+      <span class="card-hp">${card.hp} HP</span>
+    </div>
+    <div class="card-img-box">
+      ${imgHtml}
+      <span class="card-type-badge">${card.type || 'SCHOLAR'}</span>
+    </div>
+    <div class="card-desc">${card.description || ''}</div>
+    <div class="card-stats">
+      <div class="stat-box"><span class="stat-label">${card.stat1_name || ''}</span><span class="stat-val">${card.stat1_val || ''}</span></div>
+      <div class="stat-box"><span class="stat-label">${card.stat2_name || ''}</span><span class="stat-val">${card.stat2_val || ''}</span></div>
+      <div class="stat-box"><span class="stat-label">${card.stat3_name || ''}</span><span class="stat-val">${card.stat3_val || ''}</span></div>
+    </div>
+    <div class="card-move"><span class="move-name">${card.move1_name || ''}</span><span class="move-dmg">${card.move1_dmg || ''}</span></div>
+    <div class="card-move"><span class="move-name">${card.move2_name || ''}</span><span class="move-dmg">${card.move2_dmg || ''}</span></div>
+    <div class="card-footer">
+      <span class="card-rarity-tag">${RARITY_LABELS[card.rarity] || 'COMMON'}</span>
+      <span class="card-student-name">${card.students?.name || ''}</span>
+    </div>
+  </div>
+</div>`;
+          };
+
+          const renderBuiltCard = (card: any) => {
             const typeColor = TYPE_COLORS[card.type?.toLowerCase()] || '#ef4444';
             const rarityColor = RARITY_COLORS[card.rarity] || '#9ca3af';
             const rarityLabel = card.rarity === 'gold-rare' ? 'GOLD' : (card.rarity || 'COMMON').toUpperCase();
-            const imageHtml = card.image_url
+            const imgHtml = card.image_url
               ? `<img src="${card.image_url}" alt="${card.card_name}" style="width:100%;height:100%;object-fit:cover;" />`
               : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:2rem;">🎭</div>`;
-            return `
-              <div style="width:260px;aspect-ratio:2.5/3.5;border-radius:14px;overflow:hidden;border:6px solid ${typeColor};background:#111827;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.5);position:relative;break-inside:avoid;margin:16px auto;">
-                <div style="position:absolute;inset:0;background:linear-gradient(to bottom,${typeColor}55,transparent 50%,#000);pointer-events:none;z-index:0;"></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.7rem;z-index:1;position:relative;">
-                  <span style="color:white;font-weight:800;font-size:0.85rem;text-shadow:1px 1px 3px black;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:68%;">${card.card_name}</span>
-                  <span style="font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;background:${rarityColor};color:#fff;text-transform:uppercase;flex-shrink:0;letter-spacing:0.06em;">${rarityLabel}</span>
-                </div>
-                <div style="margin:0 0.5rem;aspect-ratio:4/3;background:#1a1a2e;border:2px solid #333;border-radius:6px;overflow:hidden;z-index:1;position:relative;flex-shrink:0;">${imageHtml}</div>
-                <div style="text-align:center;padding:3px 0;font-size:0.62rem;font-weight:800;color:${typeColor};background:rgba(0,0,0,0.5);letter-spacing:0.2em;text-transform:uppercase;z-index:1;position:relative;">✦ ${card.type} ✦</div>
-                <div style="flex:1;margin:0.25rem 0.5rem;padding:0.35rem 0.5rem;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;z-index:1;position:relative;">
-                  <p style="color:#ccc;font-size:0.63rem;line-height:1.45;font-style:italic;margin:0;">${card.description || 'A mysterious creature of untold power...'}</p>
-                </div>
-                <div style="display:flex;justify-content:space-around;padding:0.4rem 0.5rem;background:rgba(0,0,0,0.75);margin:0 0.5rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);z-index:1;position:relative;">
-                  <span style="color:#ff9999;font-size:0.75rem;font-weight:800;">⚔️ ${card.stat1_val}</span>
-                  <span style="color:#99ccff;font-size:0.75rem;font-weight:800;">🛡️ ${card.stat2_val}</span>
-                  <span style="color:#99ffcc;font-size:0.75rem;font-weight:800;">💨 ${card.stat3_val}</span>
-                </div>
-              </div>`;
-          }).join('\n');
+            return `<div style="width:260px;aspect-ratio:2.5/3.5;border-radius:14px;overflow:hidden;border:6px solid ${typeColor};background:#111827;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.5);position:relative;">
+  <div style="position:absolute;inset:0;background:linear-gradient(to bottom,${typeColor}55,transparent 50%,#000);z-index:0;"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.7rem;z-index:1;position:relative;">
+    <span style="color:white;font-weight:800;font-size:0.85rem;text-shadow:1px 1px 3px black;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:68%;">${card.card_name}</span>
+    <span style="font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;background:${rarityColor};color:#fff;text-transform:uppercase;flex-shrink:0;letter-spacing:0.06em;">${rarityLabel}</span>
+  </div>
+  <div style="margin:0 0.5rem;aspect-ratio:4/3;background:#1a1a2e;border:2px solid #333;border-radius:6px;overflow:hidden;z-index:1;position:relative;flex-shrink:0;">${imgHtml}</div>
+  <div style="text-align:center;padding:3px 0;font-size:0.62rem;font-weight:800;color:${typeColor};background:rgba(0,0,0,0.5);letter-spacing:0.2em;text-transform:uppercase;z-index:1;position:relative;">✦ ${card.type} ✦</div>
+  <div style="flex:1;margin:0.25rem 0.5rem;padding:0.35rem 0.5rem;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;z-index:1;position:relative;">
+    <p style="color:#ccc;font-size:0.63rem;line-height:1.45;font-style:italic;margin:0;">${card.description || 'A mysterious creature of untold power...'}</p>
+  </div>
+  <div style="display:flex;justify-content:space-around;padding:0.4rem 0.5rem;background:rgba(0,0,0,0.75);margin:0 0.5rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);z-index:1;position:relative;">
+    <span style="color:#ff9999;font-size:0.75rem;font-weight:800;">⚔️ ${card.stat1_val}</span>
+    <span style="color:#99ccff;font-size:0.75rem;font-weight:800;">🛡️ ${card.stat2_val}</span>
+    <span style="color:#99ffcc;font-size:0.75rem;font-weight:800;">💨 ${card.stat3_val}</span>
+  </div>
+</div>`;
+          };
+
+          const cardHtml = studentCards.map(card =>
+            card.card_source === 'built' ? renderBuiltCard(card) : renderPokeCard(card)
+          ).join('\n');
 
           const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>${modal.data.name}'s Cards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
   <style>
-    body { margin: 0; padding: 32px; background: linear-gradient(135deg,#fce4ec,#f3e5f5,#e8eaf6,#e1f5fe); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+    body { margin: 0; padding: 32px; background: linear-gradient(135deg,#fce4ec,#f3e5f5,#e8eaf6,#e1f5fe); font-family: 'Nunito','Segoe UI',sans-serif; min-height: 100vh; }
     h1 { text-align: center; color: #5060a0; font-size: 1.6rem; margin-bottom: 8px; }
     p.subtitle { text-align: center; color: #8090b0; font-size: 0.85rem; margin-bottom: 32px; }
-    .cards-grid { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+    .cards-grid { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; align-items: flex-start; }
+
+    /* ── PokeCard (Generate Card) styles ── */
+    .poke-card {
+      width: 260px; height: 375px; border-radius: 18px; position: relative;
+      overflow: hidden; border: 3px solid #c8a000; user-select: none; flex-shrink: 0;
+      box-shadow: 0 8px 25px rgba(200,160,0,0.2);
+    }
+    .poke-card[data-rarity="silver"] { box-shadow: 0 0 0 2px #7a9ab0, 0 8px 30px rgba(120,160,200,0.2); }
+    .poke-card[data-rarity="gold-rare"] { box-shadow: 0 0 0 3px #d4a017, 0 8px 40px rgba(212,160,23,0.35); }
+    .poke-card[data-rarity="prismatic"] { box-shadow: 0 0 0 3px #c080ff, 0 8px 50px rgba(180,100,255,0.5); animation: prismShift 4s ease-in-out infinite; }
+    @keyframes prismShift { 0%,100% { filter: hue-rotate(0deg) brightness(1.05); } 50% { filter: hue-rotate(30deg) brightness(1.12); } }
+    .card-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; padding: 10px 12px 7px; box-sizing: border-box; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .card-name { font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700; color: #1a1000; text-shadow: 0 1px 0 rgba(255,255,255,0.6); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-hp { font-size: 10px; font-weight: 800; color: #8b0000; background: rgba(255,255,255,0.6); padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+    .card-img-box { margin: 0 4px; height: 120px; background: rgba(255,255,255,0.35); border-radius: 10px; border: 2px solid rgba(255,255,255,0.65); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; flex-shrink: 0; }
+    .card-img-box img { width: 100%; height: 100%; object-fit: contain; }
+    .card-type-badge { position: absolute; bottom: 5px; right: 7px; font-size: 7px; font-weight: 800; background: rgba(0,0,0,0.35); color: white; padding: 2px 5px; border-radius: 6px; letter-spacing: 0.08em; }
+    .card-desc { margin: 5px 4px 3px; font-size: 8px; color: #2a1800; background: rgba(255,255,255,0.42); padding: 4px 7px; border-radius: 6px; font-style: italic; line-height: 1.4; border: 1px solid rgba(255,255,255,0.5); flex-shrink: 0; }
+    .card-stats { margin: 3px 4px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; flex-shrink: 0; }
+    .stat-box { background: rgba(255,255,255,0.45); border-radius: 5px; padding: 3px 2px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
+    .stat-label { font-size: 6.5px; font-weight: 800; color: #5a3a00; display: block; }
+    .stat-val { font-size: 13px; font-weight: 900; color: #1a0800; display: block; font-family: 'Cinzel', serif; }
+    .card-move { margin: 2px 4px; background: rgba(255,255,255,0.42); border-radius: 7px; padding: 3px 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.5); flex-shrink: 0; }
+    .move-name { font-size: 8.5px; font-weight: 700; color: #1a0800; }
+    .move-dmg { font-size: 13px; font-weight: 900; color: #8b0000; font-family: 'Cinzel', serif; }
+    .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 3px; flex-shrink: 0; }
+    .card-rarity-tag { font-size: 7px; font-weight: 700; color: #3a2200; }
+    .card-student-name { font-size: 7px; color: #5a3a00; font-style: italic; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 </head>
 <body>

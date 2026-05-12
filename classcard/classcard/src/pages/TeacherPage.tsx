@@ -34,9 +34,6 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const [savedBanner, setSavedBanner] = useState(false);
   const [loading, setLoading] = useState(false);
   const [geminiKey, setGeminiKey] = useState('');
-  const [emailKey, setEmailKey] = useState('');
-  const [emailService, setEmailService] = useState('');
-  const [emailTemplate, setEmailTemplate] = useState('');
   const [modal, setModal] = useState<{ type: string; data?: any } | null>(null);
   const [modalError, setModalError] = useState('');
   const [detailCard, setDetailCard] = useState<Card | null>(null);
@@ -148,10 +145,6 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
       setStudents(sList);
       setCards(cList);
       setGeminiKey(AI.getGeminiKey());
-      // Load email settings from localStorage
-      setEmailKey(localStorage.getItem('classcard_email_key') || '');
-      setEmailService(localStorage.getItem('classcard_email_service') || '');
-      setEmailTemplate(localStorage.getItem('classcard_email_template') || '');
     } catch (err: any) {
       setStatus(err.message);
       setStatusType('error');
@@ -336,13 +329,6 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
   const handleSaveKey = () => {
     AI.setGeminiKey(geminiKey);
     setDone('API key saved');
-  };
-
-  const handleSaveEmail = () => {
-    localStorage.setItem('classcard_email_key', emailKey);
-    localStorage.setItem('classcard_email_service', emailService);
-    localStorage.setItem('classcard_email_template', emailTemplate);
-    setDone('Email settings saved');
   };
 
   // Filtered cards
@@ -637,7 +623,7 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
                       <td>
                         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                           <button onClick={() => { setFilterStudent(s.id); setTab('cards'); }} className="tp-btn-outline">View</button>
-                          <button onClick={() => setModal({ type: 'email', data: s })} className="tp-btn-outline">📧</button>
+                          <button onClick={() => setModal({ type: 'downloadCards', data: s })} className="tp-btn-outline">⬇ Cards</button>
                           <button onClick={() => setModal({ type: 'editStudent', data: s })} className="tp-btn-outline">✏ Edit</button>
                           <button onClick={() => { setModalError(''); setModal({ type: 'resetPassword', data: s }); }} className="tp-btn-outline" style={{ borderColor:'rgba(80,200,120,0.35)', color:'#2a7a50' }}>🔑 Reset PIN</button>
                           <button onClick={() => setModal({ type: 'deleteStudent', data: s })} className="tp-btn-danger">🗑</button>
@@ -837,20 +823,6 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
               </div>
               <button onClick={handleSaveKey} className="tp-btn-primary">Save Key</button>
             </div>
-            <div className="tp-section" style={{ marginTop:24 }}>Email Settings (EmailJS)</div>
-            <div className="tp-panel">
-              {[
-                { label:'EmailJS Public Key', val:emailKey, set:setEmailKey, ph:'public_key', type:'password' },
-                { label:'EmailJS Service ID', val:emailService, set:setEmailService, ph:'service_xxx', type:'text' },
-                { label:'EmailJS Template ID', val:emailTemplate, set:setEmailTemplate, ph:'template_xxx', type:'text' },
-              ].map(f => (
-                <div key={f.label} style={{ marginBottom:14 }}>
-                  <label className="tp-label">{f.label}</label>
-                  <input type={f.type} className="tp-input" placeholder={f.ph} value={f.val} onChange={e => f.set(e.target.value)} />
-                </div>
-              ))}
-              <button onClick={handleSaveEmail} className="tp-btn-primary">Save Email Settings</button>
-            </div>
           </div>
         )}
         </div>{/* inner container */}
@@ -980,27 +952,94 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
             </div>
           </ModalWrapper>
         );
-      case 'email':
+      case 'downloadCards': {
+        const studentCards = cards.filter(c => c.student_id === modal.data.id);
+        const TYPE_COLORS: Record<string, string> = {
+          fire: '#ef4444', water: '#3b82f6', nature: '#22c55e',
+          electric: '#eab308', psychic: '#a855f7',
+        };
+        const RARITY_COLORS: Record<string, string> = {
+          common: '#9ca3af', silver: '#94a3b8', 'gold-rare': '#f59e0b', prismatic: '#a855f7',
+        };
+        const handleDownload = () => {
+          const cardHtml = studentCards.map(card => {
+            const typeColor = TYPE_COLORS[card.type?.toLowerCase()] || '#ef4444';
+            const rarityColor = RARITY_COLORS[card.rarity] || '#9ca3af';
+            const rarityLabel = card.rarity === 'gold-rare' ? 'GOLD' : (card.rarity || 'COMMON').toUpperCase();
+            const imageHtml = card.image_url
+              ? `<img src="${card.image_url}" alt="${card.card_name}" style="width:100%;height:100%;object-fit:cover;" />`
+              : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:2rem;">🎭</div>`;
+            return `
+              <div style="width:260px;aspect-ratio:2.5/3.5;border-radius:14px;overflow:hidden;border:6px solid ${typeColor};background:#111827;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.5);position:relative;break-inside:avoid;margin:16px auto;">
+                <div style="position:absolute;inset:0;background:linear-gradient(to bottom,${typeColor}55,transparent 50%,#000);pointer-events:none;z-index:0;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.7rem;z-index:1;position:relative;">
+                  <span style="color:white;font-weight:800;font-size:0.85rem;text-shadow:1px 1px 3px black;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:68%;">${card.card_name}</span>
+                  <span style="font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;background:${rarityColor};color:#fff;text-transform:uppercase;flex-shrink:0;letter-spacing:0.06em;">${rarityLabel}</span>
+                </div>
+                <div style="margin:0 0.5rem;aspect-ratio:4/3;background:#1a1a2e;border:2px solid #333;border-radius:6px;overflow:hidden;z-index:1;position:relative;flex-shrink:0;">${imageHtml}</div>
+                <div style="text-align:center;padding:3px 0;font-size:0.62rem;font-weight:800;color:${typeColor};background:rgba(0,0,0,0.5);letter-spacing:0.2em;text-transform:uppercase;z-index:1;position:relative;">✦ ${card.type} ✦</div>
+                <div style="flex:1;margin:0.25rem 0.5rem;padding:0.35rem 0.5rem;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;z-index:1;position:relative;">
+                  <p style="color:#ccc;font-size:0.63rem;line-height:1.45;font-style:italic;margin:0;">${card.description || 'A mysterious creature of untold power...'}</p>
+                </div>
+                <div style="display:flex;justify-content:space-around;padding:0.4rem 0.5rem;background:rgba(0,0,0,0.75);margin:0 0.5rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);z-index:1;position:relative;">
+                  <span style="color:#ff9999;font-size:0.75rem;font-weight:800;">⚔️ ${card.stat1_val}</span>
+                  <span style="color:#99ccff;font-size:0.75rem;font-weight:800;">🛡️ ${card.stat2_val}</span>
+                  <span style="color:#99ffcc;font-size:0.75rem;font-weight:800;">💨 ${card.stat3_val}</span>
+                </div>
+              </div>`;
+          }).join('\n');
+
+          const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${modal.data.name}'s Cards</title>
+  <style>
+    body { margin: 0; padding: 32px; background: linear-gradient(135deg,#fce4ec,#f3e5f5,#e8eaf6,#e1f5fe); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+    h1 { text-align: center; color: #5060a0; font-size: 1.6rem; margin-bottom: 8px; }
+    p.subtitle { text-align: center; color: #8090b0; font-size: 0.85rem; margin-bottom: 32px; }
+    .cards-grid { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+  </style>
+</head>
+<body>
+  <h1>🎴 ${modal.data.name}'s Cards</h1>
+  <p class="subtitle">${studentCards.length} card${studentCards.length !== 1 ? 's' : ''} collected</p>
+  <div class="cards-grid">
+    ${cardHtml}
+  </div>
+</body>
+</html>`;
+
+          const blob = new Blob([html], { type: 'text/html' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${modal.data.name.replace(/\s+/g, '_')}_cards.html`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setModal(null);
+        };
         return (
-          <ModalWrapper title="📧 Email Cards to Student" onClose={() => setModal(null)}>
-            <ModalForm
-              fields={[
-                { label: 'Student Name', name: 'name', type: 'text', default: modal.data.name, readonly: true },
-                { label: 'Send to Email', name: 'email', type: 'email', default: modal.data.login_email || '' },
-                { label: 'Personal Message', name: 'message', type: 'textarea', placeholder: 'Optional personal message...', optional: true },
-              ]}
-              onSubmit={async () => {
-                try {
-                  alert('Email sent! (EmailJS integration required)');
-                  setModal(null);
-                } catch (err: any) { setModalError(err.message); }
-              }}
-              submitLabel="Send Email"
-              error={modalError}
-              onCancel={() => setModal(null)}
-            />
+          <ModalWrapper title="⬇ Download Cards" onClose={() => setModal(null)}>
+            <div style={{ padding: '8px 0' }}>
+              <p style={{ color: '#5060a0', fontSize: '0.9rem', marginBottom: 16 }}>
+                Download <strong>{modal.data.name}</strong>'s cards as an HTML file.
+              </p>
+              <p style={{ color: '#8090b0', fontSize: '0.8rem', marginBottom: 24 }}>
+                {studentCards.length === 0
+                  ? 'This student has no cards yet.'
+                  : `${studentCards.length} card${studentCards.length !== 1 ? 's' : ''} will be included.`}
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setModal(null)} className="tp-btn-outline">Cancel</button>
+                <button onClick={handleDownload} className="tp-btn-primary" disabled={studentCards.length === 0}>
+                  ⬇ Download HTML
+                </button>
+              </div>
+            </div>
           </ModalWrapper>
         );
+      }
       case 'editCard':
         return (
           <ModalWrapper title="✏ Edit Card" onClose={() => setModal(null)}>

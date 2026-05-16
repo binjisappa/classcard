@@ -164,7 +164,9 @@ function LoginPage() {
         if (Math.random() > 0.05) {
           ctx.fillStyle = theme.accent;
           ctx.font = 'bold 12px monospace';
-          ctx.fillText('ClassCard', 0, -10);
+          ctx.fillText('Aurabot', 0, -16);
+          ctx.font = 'bold 7px monospace';
+          ctx.fillText('Project', 0, -4);
         }
         ctx.fillStyle = theme.accent; ctx.font = '8px monospace';
         const off = (timestamp * 0.03) % 150;

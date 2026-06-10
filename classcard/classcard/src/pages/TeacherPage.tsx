@@ -1219,11 +1219,193 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
           URL.revokeObjectURL(url);
           setModal(null);
         };
+
+        // ── PDF download: opens a print-ready page so the teacher can Save as PDF ──
+        const handleDownloadPdf = () => {
+          const RARITY_BG: Record<string, string> = {
+            common:     'linear-gradient(160deg,#f5e97a 0%,#e8c830 40%,#f5e097 70%,#ffe680 100%)',
+            silver:     'linear-gradient(160deg,#d8e4ee 0%,#a8bfcf 40%,#e0eaf2 70%,#c0d4e4 100%)',
+            'gold-rare':'linear-gradient(160deg,#ffe090 0%,#f0b020 30%,#ffd060 60%,#e89010 80%,#ffdc80 100%)',
+            prismatic:  'linear-gradient(135deg,#ffb3b3 0%,#ffd9a0 14%,#ffffa0 28%,#b3ffb3 42%,#a0e8ff 57%,#b3b3ff 71%,#e8b3ff 85%,#ffb3e8 100%)',
+          };
+          const RARITY_BORDER: Record<string, string> = {
+            common: '#c8a000', silver: '#7a9ab0', 'gold-rare': '#c07800', prismatic: '#c080ff',
+          };
+          const RARITY_LABELS: Record<string, string> = {
+            common: 'COMMON', silver: 'SILVER', 'gold-rare': 'GOLD', prismatic: 'PRISMATIC',
+          };
+          const TYPE_COLORS: Record<string, string> = {
+            fire: '#ef4444', water: '#3b82f6', nature: '#22c55e',
+            electric: '#eab308', psychic: '#a855f7',
+          };
+          const RARITY_COLORS: Record<string, string> = {
+            common: '#9ca3af', silver: '#94a3b8', 'gold-rare': '#f59e0b', prismatic: '#a855f7',
+          };
+
+          const renderPokeCard = (card: any) => {
+            const bg = RARITY_BG[card.rarity] || RARITY_BG.common;
+            const border = RARITY_BORDER[card.rarity] || '#c8a000';
+            const imgHtml = card.image_url
+              ? `<img src="${card.image_url}" alt="${card.card_name}" style="width:100%;height:100%;object-fit:contain;" crossorigin="anonymous" />`
+              : `<span style="font-size:40px;">🎭</span>`;
+            return `<div class="poke-card" data-rarity="${card.rarity}" style="background:${bg};border-color:${border};">
+  <div class="card-content">
+    <div class="card-header">
+      <span class="card-name">${card.card_name}</span>
+      <span class="card-hp">${card.hp} HP</span>
+    </div>
+    <div class="card-img-box">
+      ${imgHtml}
+      <span class="card-type-badge">${card.type || 'SCHOLAR'}</span>
+    </div>
+    <div class="card-desc">${card.description || ''}</div>
+    <div class="card-stats">
+      <div class="stat-box"><span class="stat-label">${card.stat1_name || ''}</span><span class="stat-val">${card.stat1_val || ''}</span></div>
+      <div class="stat-box"><span class="stat-label">${card.stat2_name || ''}</span><span class="stat-val">${card.stat2_val || ''}</span></div>
+      <div class="stat-box"><span class="stat-label">${card.stat3_name || ''}</span><span class="stat-val">${card.stat3_val || ''}</span></div>
+    </div>
+    <div class="card-move"><span class="move-name">${card.move1_name || ''}</span><span class="move-dmg">${card.move1_dmg || ''}</span></div>
+    <div class="card-move"><span class="move-name">${card.move2_name || ''}</span><span class="move-dmg">${card.move2_dmg || ''}</span></div>
+    <div class="card-footer">
+      <span class="card-rarity-tag">${RARITY_LABELS[card.rarity] || 'COMMON'}</span>
+      <span class="card-student-name">${card.students?.name || ''}</span>
+    </div>
+  </div>
+</div>`;
+          };
+
+          const renderBuiltCard = (card: any) => {
+            const typeColor = TYPE_COLORS[card.type?.toLowerCase()] || '#ef4444';
+            const rarityColor = RARITY_COLORS[card.rarity] || '#9ca3af';
+            const rarityLabel = card.rarity === 'gold-rare' ? 'GOLD' : (card.rarity || 'COMMON').toUpperCase();
+            const imgHtml = card.image_url
+              ? `<img src="${card.image_url}" alt="${card.card_name}" style="width:100%;height:100%;object-fit:cover;" crossorigin="anonymous" />`
+              : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:2rem;">🎭</div>`;
+            return `<div style="width:260px;aspect-ratio:2.5/3.5;border-radius:14px;overflow:hidden;border:6px solid ${typeColor};background:#111827;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.5);position:relative;">
+  <div style="position:absolute;inset:0;background:linear-gradient(to bottom,${typeColor}55,transparent 50%,#000);z-index:0;"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.7rem;z-index:1;position:relative;">
+    <span style="color:white;font-weight:800;font-size:0.85rem;text-shadow:1px 1px 3px black;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:68%;">${card.card_name}</span>
+    <span style="font-size:0.55rem;font-weight:800;padding:2px 7px;border-radius:4px;background:${rarityColor};color:#fff;text-transform:uppercase;flex-shrink:0;letter-spacing:0.06em;">${rarityLabel}</span>
+  </div>
+  <div style="margin:0 0.5rem;aspect-ratio:4/3;background:#1a1a2e;border:2px solid #333;border-radius:6px;overflow:hidden;z-index:1;position:relative;flex-shrink:0;">${imgHtml}</div>
+  <div style="text-align:center;padding:3px 0;font-size:0.62rem;font-weight:800;color:${typeColor};background:rgba(0,0,0,0.5);letter-spacing:0.2em;text-transform:uppercase;z-index:1;position:relative;">✦ ${card.type} ✦</div>
+  <div style="flex:1;margin:0.25rem 0.5rem;padding:0.35rem 0.5rem;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;z-index:1;position:relative;">
+    <p style="color:#ccc;font-size:0.63rem;line-height:1.45;font-style:italic;margin:0;">${card.description || 'A mysterious creature of untold power...'}</p>
+  </div>
+  <div style="display:flex;justify-content:space-around;padding:0.4rem 0.5rem;background:rgba(0,0,0,0.75);margin:0 0.5rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);z-index:1;position:relative;">
+    <span style="color:#ff9999;font-size:0.75rem;font-weight:800;">⚔️ ${card.stat1_val}</span>
+    <span style="color:#99ccff;font-size:0.75rem;font-weight:800;">🛡️ ${card.stat2_val}</span>
+    <span style="color:#99ffcc;font-size:0.75rem;font-weight:800;">💨 ${card.stat3_val}</span>
+  </div>
+</div>`;
+          };
+
+          const cardHtml = studentCards.map(card =>
+            card.card_source === 'built' ? renderBuiltCard(card) : renderPokeCard(card)
+          ).join('\n');
+
+          const printDate = new Date().toLocaleDateString('en-NZ', { year: 'numeric', month: 'long', day: 'numeric' });
+
+          const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${modal.data.name}'s ClassCards — Keepsake</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: white; font-family: 'Nunito','Segoe UI',sans-serif; }
+
+    /* ── Screen styles ── */
+    @media screen {
+      body { background: linear-gradient(135deg,#fce4ec,#f3e5f5,#e8eaf6,#e1f5fe); min-height: 100vh; padding: 32px; }
+      .no-print { display: block; }
+      .cover { text-align:center; padding: 40px 20px 32px; }
+      .cover h1 { font-size: 2rem; color: #5060a0; margin: 0 0 6px; }
+      .cover .subtitle { color: #8090b0; font-size: 0.9rem; }
+      .cards-grid { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; align-items: flex-start; padding: 0 16px 48px; }
+      .print-btn {
+        display: block; margin: 0 auto 28px; padding: 12px 36px;
+        background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white;
+        border: none; border-radius: 10px; font-size: 1rem; font-weight: 800;
+        cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4);
+        font-family: 'Nunito', sans-serif; letter-spacing: 0.04em;
+      }
+      .print-btn:hover { filter: brightness(1.1); }
+      .tip { text-align:center; color:#8090b0; font-size:0.78rem; margin-bottom:24px; }
+    }
+
+    /* ── Print styles ── */
+    @media print {
+      body { background: white !important; padding: 0 !important; }
+      .no-print { display: none !important; }
+      .cover { text-align: center; padding: 28px 20px 18px; page-break-after: avoid; }
+      .cover h1 { font-size: 1.6rem; color: #5060a0; margin: 0 0 4px; }
+      .cover .subtitle { color: #8090b0; font-size: 0.8rem; }
+      .cards-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; padding: 10px 20px; }
+      /* Keep each card visually intact — avoid splitting across pages */
+      .poke-card, .built-card-wrap { break-inside: avoid; page-break-inside: avoid; }
+      /* Force backgrounds to print */
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    }
+
+    /* ── PokeCard styles ── */
+    .poke-card {
+      width: 260px; height: 375px; border-radius: 18px; position: relative;
+      overflow: hidden; border: 3px solid #c8a000; user-select: none; flex-shrink: 0;
+      box-shadow: 0 8px 25px rgba(200,160,0,0.2);
+    }
+    .poke-card[data-rarity="silver"] { box-shadow: 0 0 0 2px #7a9ab0, 0 8px 30px rgba(120,160,200,0.2); }
+    .poke-card[data-rarity="gold-rare"] { box-shadow: 0 0 0 3px #d4a017, 0 8px 40px rgba(212,160,23,0.35); }
+    .poke-card[data-rarity="prismatic"] { box-shadow: 0 0 0 3px #c080ff, 0 8px 50px rgba(180,100,255,0.5); }
+    .card-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; padding: 10px 12px 7px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .card-name { font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700; color: #1a1000; text-shadow: 0 1px 0 rgba(255,255,255,0.6); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-hp { font-size: 10px; font-weight: 800; color: #8b0000; background: rgba(255,255,255,0.6); padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+    .card-img-box { margin: 0 4px; height: 120px; background: rgba(255,255,255,0.35); border-radius: 10px; border: 2px solid rgba(255,255,255,0.65); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; flex-shrink: 0; }
+    .card-img-box img { width: 100%; height: 100%; object-fit: contain; }
+    .card-type-badge { position: absolute; bottom: 5px; right: 7px; font-size: 7px; font-weight: 800; background: rgba(0,0,0,0.35); color: white; padding: 2px 5px; border-radius: 6px; letter-spacing: 0.08em; }
+    .card-desc { margin: 5px 4px 3px; font-size: 8px; color: #2a1800; background: rgba(255,255,255,0.42); padding: 4px 7px; border-radius: 6px; font-style: italic; line-height: 1.4; border: 1px solid rgba(255,255,255,0.5); flex-shrink: 0; }
+    .card-stats { margin: 3px 4px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; flex-shrink: 0; }
+    .stat-box { background: rgba(255,255,255,0.45); border-radius: 5px; padding: 3px 2px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
+    .stat-label { font-size: 6.5px; font-weight: 800; color: #5a3a00; display: block; }
+    .stat-val { font-size: 13px; font-weight: 900; color: #1a0800; display: block; font-family: 'Cinzel', serif; }
+    .card-move { margin: 2px 4px; background: rgba(255,255,255,0.42); border-radius: 7px; padding: 3px 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.5); flex-shrink: 0; }
+    .move-name { font-size: 8.5px; font-weight: 700; color: #1a0800; }
+    .move-dmg { font-size: 13px; font-weight: 900; color: #8b0000; font-family: 'Cinzel', serif; }
+    .card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 3px; flex-shrink: 0; }
+    .card-rarity-tag { font-size: 7px; font-weight: 700; color: #3a2200; }
+    .card-student-name { font-size: 7px; color: #5a3a00; font-style: italic; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <h1>🎴 ${modal.data.name}'s ClassCards</h1>
+    <p class="subtitle">${studentCards.length} card${studentCards.length !== 1 ? 's' : ''} collected &nbsp;·&nbsp; Printed ${printDate}</p>
+  </div>
+  <div class="no-print" style="text-align:center;">
+    <button class="print-btn" onclick="window.print()">🖨 Save as PDF / Print</button>
+    <p class="tip">In the print dialog, choose <strong>"Save as PDF"</strong> and enable <strong>"Background graphics"</strong> for full colour.</p>
+  </div>
+  <div class="cards-grid">
+    ${cardHtml}
+  </div>
+</body>
+</html>`;
+
+          const blob = new Blob([html], { type: 'text/html' });
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          // Revoke after a delay to allow the new tab to load
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          setModal(null);
+        };
+
         return (
           <ModalWrapper title="⬇ Download Cards" onClose={() => setModal(null)}>
             <div style={{ padding: '8px 0' }}>
               <p style={{ color: '#5060a0', fontSize: '0.9rem', marginBottom: 16 }}>
-                Download <strong>{modal.data.name}</strong>'s cards as an HTML file.
+                Download <strong>{modal.data.name}</strong>'s cards as a keepsake.
               </p>
               <p style={{ color: '#8090b0', fontSize: '0.8rem', marginBottom: 24 }}>
                 {studentCards.length === 0
@@ -1232,10 +1414,18 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
               </p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button onClick={() => setModal(null)} className="tp-btn-outline">Cancel</button>
-                <button onClick={handleDownload} className="tp-btn-primary" disabled={studentCards.length === 0}>
-                  ⬇ Download HTML
+                <button onClick={handleDownload} className="tp-btn-outline" disabled={studentCards.length === 0}>
+                  ⬇ HTML
+                </button>
+                <button onClick={handleDownloadPdf} className="tp-btn-primary" disabled={studentCards.length === 0}>
+                  🖨 Save as PDF
                 </button>
               </div>
+              {studentCards.length > 0 && (
+                <p style={{ color: '#a0a8c8', fontSize: '0.72rem', marginTop: 12, textAlign: 'right' }}>
+                  PDF opens a print-ready page — choose "Save as PDF" in the print dialog.
+                </p>
+              )}
             </div>
           </ModalWrapper>
         );

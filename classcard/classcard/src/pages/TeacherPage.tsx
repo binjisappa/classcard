@@ -953,6 +953,224 @@ function TeacherPage({ session, onSignOut }: { session: NonNullable<Session>; on
       {/* Modals */}
       {renderModal()}
 
+      {/* ══ Mass Create Accounts Modal ═══════════════════════════════════ */}
+      {showMassCreate && (
+        <div className="tp-modal-bg" onClick={() => { if (!massCreateProgress) resetMassCreateModal(); }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fffbf0', border: '2px solid rgba(90,50,10,0.25)', borderRadius: 20, padding: '2rem', width: '95%', maxWidth: 900, maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <button onClick={resetMassCreateModal} disabled={!!massCreateProgress} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: '1.3rem', cursor: massCreateProgress ? 'not-allowed' : 'pointer', color: '#8a5520', opacity: massCreateProgress ? 0.4 : 1 }}>✕</button>
+            
+            <h3 className="font-display font-black text-xl mb-1" style={{ color: '#3d2b1f' }}>👥 Mass Create Student Accounts</h3>
+            <p className="text-xs mb-5 italic" style={{ color: '#9a7040' }}>Create multiple student accounts at once. Each student will receive the same temporary password and must change it on first login.</p>
+
+            {/* Mode selector */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <button 
+                onClick={() => setMassCreateMode('manual')} 
+                disabled={!!massCreateProgress}
+                style={{ 
+                  flex: 1, 
+                  padding: '0.6rem', 
+                  borderRadius: 10, 
+                  border: massCreateMode === 'manual' ? '2px solid #c8a000' : '1.5px solid rgba(90,50,10,0.2)', 
+                  background: massCreateMode === 'manual' ? 'rgba(200,160,0,0.12)' : 'rgba(255,248,222,0.5)', 
+                  color: massCreateMode === 'manual' ? '#8b6a00' : '#7a5a40',
+                  fontWeight: massCreateMode === 'manual' ? 700 : 400,
+                  cursor: massCreateProgress ? 'not-allowed' : 'pointer'
+                }}
+              >
+                ✍ Manual Entry
+              </button>
+              <button 
+                onClick={() => setMassCreateMode('csv')} 
+                disabled={!!massCreateProgress}
+                style={{ 
+                  flex: 1, 
+                  padding: '0.6rem', 
+                  borderRadius: 10, 
+                  border: massCreateMode === 'csv' ? '2px solid #c8a000' : '1.5px solid rgba(90,50,10,0.2)', 
+                  background: massCreateMode === 'csv' ? 'rgba(200,160,0,0.12)' : 'rgba(255,248,222,0.5)', 
+                  color: massCreateMode === 'csv' ? '#8b6a00' : '#7a5a40',
+                  fontWeight: massCreateMode === 'csv' ? 700 : 400,
+                  cursor: massCreateProgress ? 'not-allowed' : 'pointer'
+                }}
+              >
+                📄 Upload CSV
+              </button>
+            </div>
+
+            {/* CSV Upload Mode */}
+            {massCreateMode === 'csv' && (
+              <div className="tp-panel" style={{ marginBottom: 20 }}>
+                <label className="tp-label">Upload CSV File</label>
+                <p className="text-xs mb-3" style={{ color: '#8090b0' }}>
+                  CSV format: <code style={{ background: 'rgba(90,50,10,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>name,email</code>
+                  <br />Example: <code style={{ background: 'rgba(90,50,10,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>John Smith,john@school.com</code>
+                </p>
+                <input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={handleCSVUpload} 
+                  disabled={!!massCreateProgress}
+                  style={{ 
+                    padding: '0.6rem', 
+                    borderRadius: 8, 
+                    border: '1.5px solid rgba(90,50,10,0.2)', 
+                    background: 'rgba(255,248,222,0.5)',
+                    width: '100%',
+                    cursor: massCreateProgress ? 'not-allowed' : 'pointer'
+                  }} 
+                />
+              </div>
+            )}
+
+            {/* Student List */}
+            <div className="tp-panel" style={{ marginBottom: 20, maxHeight: 300, overflowY: 'auto' }}>
+              <label className="tp-label">Students to Create ({massCreateList.filter(s => s.name.trim() && s.email.trim()).length})</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {massCreateList.map((student, index) => (
+                  <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Student name" 
+                      value={student.name}
+                      onChange={(e) => handleMassCreateInputChange(index, 'name', e.target.value)}
+                      disabled={!!massCreateProgress}
+                      className="tp-input"
+                      style={{ flex: 1 }}
+                    />
+                    <input 
+                      type="email" 
+                      placeholder="email@example.com" 
+                      value={student.email}
+                      onChange={(e) => handleMassCreateInputChange(index, 'email', e.target.value)}
+                      disabled={!!massCreateProgress}
+                      className="tp-input"
+                      style={{ flex: 1 }}
+                    />
+                    {massCreateList.length > 1 && (
+                      <button 
+                        onClick={() => handleRemoveMassCreateRow(index)} 
+                        disabled={!!massCreateProgress}
+                        className="tp-btn-danger"
+                        style={{ padding: '0.5rem 0.8rem', fontSize: '0.8rem' }}
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {massCreateMode === 'manual' && (
+                <button 
+                  onClick={handleAddMassCreateRow} 
+                  disabled={!!massCreateProgress}
+                  className="tp-btn-outline"
+                  style={{ marginTop: 12, width: '100%' }}
+                >
+                  + Add Another Student
+                </button>
+              )}
+            </div>
+
+            {/* Temporary Password Settings */}
+            <div className="tp-panel" style={{ marginBottom: 20 }}>
+              <label className="tp-label">Temporary Password</label>
+              <p className="text-xs mb-3" style={{ color: '#8090b0' }}>
+                All students will receive this same temporary password. They will be required to change it on first login.
+              </p>
+              <input 
+                type="text" 
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                disabled={!!massCreateProgress}
+                className="tp-input"
+                placeholder="e.g., ClassCard2024!"
+                style={{ marginBottom: 12 }}
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#5a3a20' }}>
+                <input 
+                  type="checkbox" 
+                  checked={requirePasswordChange}
+                  onChange={(e) => setRequirePasswordChange(e.target.checked)}
+                  disabled={!!massCreateProgress}
+                  style={{ width: 18, height: 18 }}
+                />
+                Require password change on first login
+              </label>
+            </div>
+
+            {/* Progress indicator */}
+            {massCreateProgress && (
+              <div className="tp-panel" style={{ marginBottom: 20, background: 'rgba(100,160,255,0.1)' }}>
+                <div className="text-sm font-bold mb-2" style={{ color: '#5070c0' }}>
+                  Creating accounts... {massCreateProgress.current} of {massCreateProgress.total}
+                </div>
+                <div style={{ width: '100%', height: 8, background: 'rgba(90,50,10,0.1)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${(massCreateProgress.current / massCreateProgress.total) * 100}%`, 
+                    height: '100%', 
+                    background: 'linear-gradient(90deg, #5070c0, #7090e0)', 
+                    transition: 'width 0.3s ease' 
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {/* Results */}
+            {massCreateResults.length > 0 && (
+              <div className="tp-panel" style={{ marginBottom: 20, maxHeight: 200, overflowY: 'auto' }}>
+                <label className="tp-label">Results</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {massCreateResults.map((result, index) => (
+                    <div key={index} style={{ 
+                      padding: '0.5rem', 
+                      borderRadius: 6, 
+                      background: result.success ? 'rgba(80,200,120,0.1)' : 'rgba(255,100,100,0.1)',
+                      border: `1px solid ${result.success ? 'rgba(80,200,120,0.3)' : 'rgba(255,100,100,0.3)'}`,
+                      fontSize: '0.8rem'
+                    }}>
+                      <span style={{ color: result.success ? '#2a7a50' : '#c03030', fontWeight: 600 }}>
+                        {result.success ? '✓' : '✗'} {result.name} ({result.email})
+                      </span>
+                      {result.error && <div style={{ color: '#c03030', fontSize: '0.75rem', marginTop: 4 }}>Error: {result.error}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Status message */}
+            {massCreateStatus && (
+              <div className="tp-status-default" style={{ marginBottom: 16 }}>
+                {massCreateStatus}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button 
+                onClick={resetMassCreateModal} 
+                disabled={!!massCreateProgress}
+                className="tp-btn-outline"
+                style={{ opacity: massCreateProgress ? 0.4 : 1 }}
+              >
+                {massCreateResults.length > 0 ? 'Close' : 'Cancel'}
+              </button>
+              {massCreateResults.length === 0 && (
+                <button 
+                  onClick={handleMassCreateAccounts} 
+                  disabled={!!massCreateProgress || massCreateList.filter(s => s.name.trim() && s.email.trim()).length === 0}
+                  className="tp-btn-primary"
+                  style={{ opacity: (massCreateProgress || massCreateList.filter(s => s.name.trim() && s.email.trim()).length === 0) ? 0.4 : 1 }}
+                >
+                  {massCreateProgress ? 'Creating...' : `👥 Create ${massCreateList.filter(s => s.name.trim() && s.email.trim()).length} Account${massCreateList.filter(s => s.name.trim() && s.email.trim()).length !== 1 ? 's' : ''}`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Card Detail Modal */}
       {detailCard && (
         <div className="tp-modal-bg" onClick={() => setDetailCard(null)}>
@@ -2480,223 +2698,6 @@ function WeeklyProjectTab({
         </div>
       )}
 
-      {/* ══ Mass Create Accounts Modal ═══════════════════════════════════ */}
-      {showMassCreate && (
-        <div className="tp-modal-bg" onClick={() => { if (!massCreateProgress) resetMassCreateModal(); }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fffbf0', border: '2px solid rgba(90,50,10,0.25)', borderRadius: 20, padding: '2rem', width: '95%', maxWidth: 900, maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
-            <button onClick={resetMassCreateModal} disabled={!!massCreateProgress} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: '1.3rem', cursor: massCreateProgress ? 'not-allowed' : 'pointer', color: '#8a5520', opacity: massCreateProgress ? 0.4 : 1 }}>✕</button>
-            
-            <h3 className="font-display font-black text-xl mb-1" style={{ color: '#3d2b1f' }}>👥 Mass Create Student Accounts</h3>
-            <p className="text-xs mb-5 italic" style={{ color: '#9a7040' }}>Create multiple student accounts at once. Each student will receive the same temporary password and must change it on first login.</p>
-
-            {/* Mode selector */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              <button 
-                onClick={() => setMassCreateMode('manual')} 
-                disabled={!!massCreateProgress}
-                style={{ 
-                  flex: 1, 
-                  padding: '0.6rem', 
-                  borderRadius: 10, 
-                  border: massCreateMode === 'manual' ? '2px solid #c8a000' : '1.5px solid rgba(90,50,10,0.2)', 
-                  background: massCreateMode === 'manual' ? 'rgba(200,160,0,0.12)' : 'rgba(255,248,222,0.5)', 
-                  color: massCreateMode === 'manual' ? '#8b6a00' : '#7a5a40',
-                  fontWeight: massCreateMode === 'manual' ? 700 : 400,
-                  cursor: massCreateProgress ? 'not-allowed' : 'pointer'
-                }}
-              >
-                ✍ Manual Entry
-              </button>
-              <button 
-                onClick={() => setMassCreateMode('csv')} 
-                disabled={!!massCreateProgress}
-                style={{ 
-                  flex: 1, 
-                  padding: '0.6rem', 
-                  borderRadius: 10, 
-                  border: massCreateMode === 'csv' ? '2px solid #c8a000' : '1.5px solid rgba(90,50,10,0.2)', 
-                  background: massCreateMode === 'csv' ? 'rgba(200,160,0,0.12)' : 'rgba(255,248,222,0.5)', 
-                  color: massCreateMode === 'csv' ? '#8b6a00' : '#7a5a40',
-                  fontWeight: massCreateMode === 'csv' ? 700 : 400,
-                  cursor: massCreateProgress ? 'not-allowed' : 'pointer'
-                }}
-              >
-                📄 Upload CSV
-              </button>
-            </div>
-
-            {/* CSV Upload Mode */}
-            {massCreateMode === 'csv' && (
-              <div className="tp-panel" style={{ marginBottom: 20 }}>
-                <label className="tp-label">Upload CSV File</label>
-                <p className="text-xs mb-3" style={{ color: '#8090b0' }}>
-                  CSV format: <code style={{ background: 'rgba(90,50,10,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>name,email</code>
-                  <br />Example: <code style={{ background: 'rgba(90,50,10,0.1)', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>John Smith,john@school.com</code>
-                </p>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleCSVUpload} 
-                  disabled={!!massCreateProgress}
-                  style={{ 
-                    padding: '0.6rem', 
-                    borderRadius: 8, 
-                    border: '1.5px solid rgba(90,50,10,0.2)', 
-                    background: 'rgba(255,248,222,0.5)',
-                    width: '100%',
-                    cursor: massCreateProgress ? 'not-allowed' : 'pointer'
-                  }} 
-                />
-              </div>
-            )}
-
-            {/* Student List */}
-            <div className="tp-panel" style={{ marginBottom: 20, maxHeight: 300, overflowY: 'auto' }}>
-              <label className="tp-label">Students to Create ({massCreateList.filter(s => s.name.trim() && s.email.trim()).length})</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {massCreateList.map((student, index) => (
-                  <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input 
-                      type="text" 
-                      placeholder="Student name" 
-                      value={student.name}
-                      onChange={(e) => handleMassCreateInputChange(index, 'name', e.target.value)}
-                      disabled={!!massCreateProgress}
-                      className="tp-input"
-                      style={{ flex: 1 }}
-                    />
-                    <input 
-                      type="email" 
-                      placeholder="email@example.com" 
-                      value={student.email}
-                      onChange={(e) => handleMassCreateInputChange(index, 'email', e.target.value)}
-                      disabled={!!massCreateProgress}
-                      className="tp-input"
-                      style={{ flex: 1 }}
-                    />
-                    {massCreateList.length > 1 && (
-                      <button 
-                        onClick={() => handleRemoveMassCreateRow(index)} 
-                        disabled={!!massCreateProgress}
-                        className="tp-btn-danger"
-                        style={{ padding: '0.5rem 0.8rem', fontSize: '0.8rem' }}
-                      >
-                        🗑
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {massCreateMode === 'manual' && (
-                <button 
-                  onClick={handleAddMassCreateRow} 
-                  disabled={!!massCreateProgress}
-                  className="tp-btn-outline"
-                  style={{ marginTop: 12, width: '100%' }}
-                >
-                  + Add Another Student
-                </button>
-              )}
-            </div>
-
-            {/* Temporary Password Settings */}
-            <div className="tp-panel" style={{ marginBottom: 20 }}>
-              <label className="tp-label">Temporary Password</label>
-              <p className="text-xs mb-3" style={{ color: '#8090b0' }}>
-                All students will receive this same temporary password. They will be required to change it on first login.
-              </p>
-              <input 
-                type="text" 
-                value={tempPassword}
-                onChange={(e) => setTempPassword(e.target.value)}
-                disabled={!!massCreateProgress}
-                className="tp-input"
-                placeholder="e.g., ClassCard2024!"
-                style={{ marginBottom: 12 }}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#5a3a20' }}>
-                <input 
-                  type="checkbox" 
-                  checked={requirePasswordChange}
-                  onChange={(e) => setRequirePasswordChange(e.target.checked)}
-                  disabled={!!massCreateProgress}
-                  style={{ width: 18, height: 18 }}
-                />
-                Require password change on first login
-              </label>
-            </div>
-
-            {/* Progress indicator */}
-            {massCreateProgress && (
-              <div className="tp-panel" style={{ marginBottom: 20, background: 'rgba(100,160,255,0.1)' }}>
-                <div className="text-sm font-bold mb-2" style={{ color: '#5070c0' }}>
-                  Creating accounts... {massCreateProgress.current} of {massCreateProgress.total}
-                </div>
-                <div style={{ width: '100%', height: 8, background: 'rgba(90,50,10,0.1)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: `${(massCreateProgress.current / massCreateProgress.total) * 100}%`, 
-                    height: '100%', 
-                    background: 'linear-gradient(90deg, #5070c0, #7090e0)', 
-                    transition: 'width 0.3s ease' 
-                  }} />
-                </div>
-              </div>
-            )}
-
-            {/* Results */}
-            {massCreateResults.length > 0 && (
-              <div className="tp-panel" style={{ marginBottom: 20, maxHeight: 200, overflowY: 'auto' }}>
-                <label className="tp-label">Results</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {massCreateResults.map((result, index) => (
-                    <div key={index} style={{ 
-                      padding: '0.5rem', 
-                      borderRadius: 6, 
-                      background: result.success ? 'rgba(80,200,120,0.1)' : 'rgba(255,100,100,0.1)',
-                      border: `1px solid ${result.success ? 'rgba(80,200,120,0.3)' : 'rgba(255,100,100,0.3)'}`,
-                      fontSize: '0.8rem'
-                    }}>
-                      <span style={{ color: result.success ? '#2a7a50' : '#c03030', fontWeight: 600 }}>
-                        {result.success ? '✓' : '✗'} {result.name} ({result.email})
-                      </span>
-                      {result.error && <div style={{ color: '#c03030', fontSize: '0.75rem', marginTop: 4 }}>Error: {result.error}</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Status message */}
-            {massCreateStatus && (
-              <div className="tp-status-default" style={{ marginBottom: 16 }}>
-                {massCreateStatus}
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button 
-                onClick={resetMassCreateModal} 
-                disabled={!!massCreateProgress}
-                className="tp-btn-outline"
-                style={{ opacity: massCreateProgress ? 0.4 : 1 }}
-              >
-                {massCreateResults.length > 0 ? 'Close' : 'Cancel'}
-              </button>
-              {massCreateResults.length === 0 && (
-                <button 
-                  onClick={handleMassCreateAccounts} 
-                  disabled={!!massCreateProgress || massCreateList.filter(s => s.name.trim() && s.email.trim()).length === 0}
-                  className="tp-btn-primary"
-                  style={{ opacity: (massCreateProgress || massCreateList.filter(s => s.name.trim() && s.email.trim()).length === 0) ? 0.4 : 1 }}
-                >
-                  {massCreateProgress ? 'Creating...' : `👥 Create ${massCreateList.filter(s => s.name.trim() && s.email.trim()).length} Account${massCreateList.filter(s => s.name.trim() && s.email.trim()).length !== 1 ? 's' : ''}`}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ══ Bulk Award Modal ═══════════════════════════════════════════ */}
       {awardModal && (
